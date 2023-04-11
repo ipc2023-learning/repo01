@@ -1,6 +1,6 @@
 # Stage 1: Compile the planner
 Bootstrap: docker
-From: ubuntu:14.04
+From: ubuntu:kinetic
 Stage: build
 
 %files
@@ -8,33 +8,52 @@ Stage: build
 
 %post
     apt-get update
-    apt-get -y install --no-install-recommends g++ g++-multilib make libboost-dev
+    apt-get -y install --no-install-recommends cmake make g++ python3 pypy3 automake pkg-config libgmp10 libgmp-dev libreadline-dev  libsqlite3-dev sqlite3
 
-    cd cedalion/src
-    ./build_all -j8
-    strip --strip-all preprocess/preprocess search/downward-release
+
+    # TODO: Fix compilation error in newer g++
+    # rm -rf fd-symbolic/builds
+    # cd fd-symbolic
+    # pypy3 build.py
+    # strip --strip-all builds/release64/bin/preprocess builds/release64/bin/downward
+    # cd ..
+
+
+    mkdir yap
+    cd learning/yap
+    mkdir build
+    cd build
+
+    cmake .. -DCMAKE_INSTALL_PREFIX=/yap
+    make
+    make install
+
+    # TODO Install lab
 
 
 # Stage 2: Run the planner
 Bootstrap: docker
-From: ubuntu:14.04
+From: ubuntu:kinetic
 Stage: run
 
 # Copy planner binary and required files from Stage 1.
 %files from build
-    cedalion/src/preprocess/preprocess
-    cedalion/src/search/downward-release
-    cedalion/src/translate
-    lab
-    preprocess-tasks.py
-    parameters
-    smac
-    tuning
-    wrapper
+
+    learn.py
+    training
+
+    fd-symbolic/builds/release64/bin/
+    fd-symbolic/fast-downward.py
+    fd-symbolic/driver
+
+    learning/learning-aleph
+    learning/learning-sklearn
+    learning/aleph/aleph.pl
+    learning/translate
 
 %post
     apt-get update
-    apt-get -y install --no-install-recommends default-jre-headless pypy python ruby
+   # apt-get -y install --no-install-recommends default-jre-headless pypy python ruby
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 

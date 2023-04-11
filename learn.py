@@ -14,18 +14,18 @@ from lab.environments import  LocalEnvironment
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
 from good_operator_experiment import run_step_good_operators
+from partial_grounding_rules import run_step_partial_grounding_rules
+from partial_grounding_aleph import run_step_partial_grounding_aleph
 
 from downward import suites
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
-
-    parser.add_argument("--path", default='./data', help="path to domain file")
-
+    parser.add_argument("--path", default='./data', help="path to store results")
     parser.add_argument("--cpus", type=int, default=1, help="number of cpus available")
-
     parser.add_argument("--total_time_limit", default=30, type=int, help="time limit")
     parser.add_argument("--total_memory_limit", default=7*1024, help="memory limit")
 
@@ -53,8 +53,8 @@ def main():
     os.mkdir(BENCHMARKS_DIR)
     shutil.copy(args.domain, BENCHMARKS_DIR)
 
-    os.mkdir(INSTANCES_SMAC)
-    shutil.copy(args.domain, INSTANCES_SMAC)
+    # os.mkdir(INSTANCES_SMAC)
+    # shutil.copy(args.domain, INSTANCES_SMAC)
 
     for problem in args.problem:
         # TODO Split instances in some way and only put some on instances smac
@@ -66,52 +66,14 @@ def main():
 
     run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
+    # Only do this if the domain has action cost:
+    # run_step_good_operators(f'{TRAINING_DIR}/good-operators', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
+    #TODO: set time and memory limits
+    #TODO: train also without good operators
+    run_step_partial_grounding_rules(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-rules', args.domain)
 
-
-    #run_step_partial_grounding
-    time_limit = 300
-    memory_limit = 4*1024*1024
-
-    os.mkdir(f"{TRAINING_DIR}/partial-grounding-rules")    # TODO: Set to 10k instead of 1k
-    Call([sys.executable, f'{REPO_LEARNING}/learning-sklearn/generate-exhaustive-feature-rules.py', args.domain, '--runs', f'{TRAINING_DIR}/good-operators-unit', '--rule_size', '7', '--store_rules', f'{TRAINING_DIR}/partial-grounding-rules/rules-exhaustive-1k', '--num_rules','1000'], "generate-rules", time_limit=time_limit, memory_limit=memory_limit).wait()
-    # TODO: Check if rules have been correctly generated. Otherwise, re-generate with smaller size?
-
-    Call([sys.executable, f'{REPO_LEARNING}/learning-sklearn/filter-irrelevant-rules.py', '--instances-relevant-rules', '10', f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-rules/rules-exhaustive-1k', f'{TRAINING_DIR}/partial-grounding-rules/rules-exhaustive-1k-filtered'], "filter-rules", time_limit=time_limit, memory_limit=memory_limit).wait()
-
-    Call([sys.executable, f'{REPO_LEARNING}/learning-sklearn/generate-training-data.py', \
-                                         f'{TRAINING_DIR}/good-operators-unit',\
-                                         f'{TRAINING_DIR}/partial-grounding-rules/rules-exhaustive-1k-filtered',\
-                                         f'{TRAINING_DIR}/partial-grounding-rules/training-data-good-operators-exhaustive-1k-filtered',\
-                                         '--op-file', 'good_operators',\
-                                         '--max-training-examples', '1000000' # '--num-test-instances TODO Set some test instances
-          ], "generate-training-data-1", time_limit=time_limit, memory_limit=memory_limit).wait()
-
-
-    # Call([sys.executable, f'{REPO_LEARNING}/learning-sklearn/generate-random-feature-rules.py'],  time_limit=time_limit, mem_limit=memory_limit).wait()
-
-
-
-
-        # print("Preprocessing", problem)
-        # time_limit = 24 * 60 * 60 / len(args.problem)
-        # memory_limit = 7 * 1024
-        # Call([sys.executable, TRANSLATE, args.domain, problem], time_limit=time_limit, mem_limit=memory_limit).wait()
-        # if not os.path.exists("output.sas"):
-        #     continue
-        # Call([PREPROCESS], stdin="output.sas", time_limit=time_limit, mem_limit=memory_limit).wait()
-        # if not os.path.exists("output"):
-        #     continue
-
-        # os.remove("output.sas")
-        # problem_path = os.path.join(TRAINING_TASKS_DIR, "p{i:03d}.sas".format(i=len(training_set) + 1))
-        # shutil.move("output", problem_path)
-        # training_set.append(problem_path)
-
-    # print("Training set:", training_set)
-    # with open("instances.txt", "w") as f:
-    #     f.write("\n".join(training_set))
-
+    run_step_partial_grounding_aleph(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-aleph', args.domain)
 
 if __name__ == "__main__":
     main()
