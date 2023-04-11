@@ -16,6 +16,18 @@ To set up the remote hosts (needed to enable the pull commands below), run the f
 
 `git remote add -f gofai-learning git@gitlab.com:atorralba/gofai-learning.git`
 
+`git remote add -f gnn-learning https://github.com/Czubbi/GraphNeuralNetworks-ICAPS.git`
+
+Then add the subtrees with a desired directory for each of the remotes:
+
+ `git remote add -f fd-partial-grounding git@gitlab.com:dgnad/downward-partial-grounding.git`
+
+ `git remote add -f fd-symbolic git@gitlab.com:atorralba/fast-downward-symbolic-all-plans.git`
+
+ `git remote add -f gofai-learning git@gitlab.com:atorralba/gofai-learning.git`
+
+ `git subtree add --prefix gnn-learning gnn-learning main --squash`
+
 
 ## Pulling from one of the component repos:
 
@@ -30,6 +42,8 @@ To set up the remote hosts (needed to enable the pull commands below), run the f
 Example:
 
 `git fetch gofai-learning`
+
+`git subtree add --prefix gnn-learning gnn-learning main --squash`
 
 `git subtree pull --prefix learning gofai-learning main --squash`
 
