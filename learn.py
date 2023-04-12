@@ -16,6 +16,7 @@ import training
 from good_operator_experiment import run_step_good_operators
 from partial_grounding_rules import run_step_partial_grounding_rules
 from partial_grounding_aleph import run_step_partial_grounding_aleph
+from gnn_training import run_step_gnn_learning
 
 from downward import suites
 
@@ -66,6 +67,31 @@ def main():
 
     run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
+    # https://gitlab.com/atorralba/ipc-2023-gnn/-/issues/2
+    # Option first is that we will have 2 dirs that follow the some naming convention: eg for problem1.pddl, we have problem1 and problem1.sas
+        # good_operators_dir
+        # output_sas_dir
+    # Option 2 is that we will have 1 dir that has the same name as the problem and inside it we have the sas file and the good operators file 
+
+    # nonetheless, we will make a separate dir, where each of the problems is a specific dir that stores graph objects (csv), and the good operators file
+
+    # run_generate_graph_objects:
+
+    # train_dir = some
+    # something
+       # problem1
+              # nodes.csv
+              # edges.csv
+       # problem 2
+             # ...
+
+    # run_step_gnn_learning(
+    #     REPO_LEARNING=REPO_LEARNING,
+    #     WORKING_DIR=os.path.join(TRAINING_DIR, "gnn-learning"),
+    #     domain_file=args.domain,
+    #     time_limit=300,
+    #     memory_limit=4 *1024 *1024
+    # )
     # Only do this if the domain has action cost:
     # run_step_good_operators(f'{TRAINING_DIR}/good-operators', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
