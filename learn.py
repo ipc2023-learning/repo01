@@ -17,6 +17,7 @@ from good_operator_experiment import run_step_good_operators
 from partial_grounding_rules import run_step_partial_grounding_rules
 from partial_grounding_aleph import run_step_partial_grounding_aleph
 from gnn_training import run_step_gnn_learning
+from generate_gnn_data import run_step_generate_gnn_data
 
 from downward import suites
 
@@ -42,6 +43,7 @@ def main():
 
     REPO_GOOD_OPERATORS = f"{ROOT}/fd-symbolic"
     REPO_LEARNING = f"{ROOT}/learning"
+    REPO_GNN_LEARNING = f"{ROOT}/gnn-learning"
     BENCHMARKS_DIR = f"{TRAINING_DIR}/instances-training"
     INSTANCES_SMAC = f"{TRAINING_DIR}/instances-smac"
     REPO_PARTIAL_GROUNDING = f"{ROOT}/fd-partial-grounding"
@@ -61,7 +63,7 @@ def main():
         # TODO Split instances in some way and only put some on instances smac
         shutil.copy(problem, BENCHMARKS_DIR)
         # shutil.copy(problem, INSTANCES_SMAC)
-
+    
     ENV = LocalEnvironment(processes=args.cpus)
     SUITE_TRAINING = suites.build_suite(TRAINING_DIR, ['instances-training'])
 
@@ -75,7 +77,8 @@ def main():
 
     # nonetheless, we will make a separate dir, where each of the problems is a specific dir that stores graph objects (csv), and the good operators file
 
-    # run_generate_graph_objects:
+    # run_generate_graph_objects:    
+    # run_step_generate_gnn_data(REPO_GNN_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/gnn-data')
 
     # train_dir = some
     # something
@@ -98,7 +101,6 @@ def main():
     #TODO: set time and memory limits
     #TODO: train also without good operators
     run_step_partial_grounding_rules(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-rules', args.domain)
-
     run_step_partial_grounding_aleph(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-aleph', args.domain)
 
 if __name__ == "__main__":
