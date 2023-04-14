@@ -1,15 +1,11 @@
 import os
 import sys
 from lab.calls.call import Call
-import shutil
-from dataclasses import dataclass, field
-
-file_path = str
-dir_path = str
+from dataclasses import dataclass
 
 CONVOLUTIONS = {
     "SAGEConv",
-    "GATConv"
+    "GATConv",
     "GCNConv"
 }
 
@@ -23,9 +19,9 @@ AGGREGATIONS = {
     "std"
 }
 
-optimizer_classes = {
-    "Adam"
-    "RMSprop"
+OPTIMIZER_CLASSES = {
+    "Adam",
+    "RMSprop",
     "Adagrad"
 }
 
@@ -46,7 +42,7 @@ class ModelSetting:
 
         self.checks(self.conv_type, CONVOLUTIONS)
         self.checks(self.aggr, AGGREGATIONS)
-        self.checks(self.optimizer, optimizer_classes)
+        self.checks(self.optimizer, OPTIMIZER_CLASSES)
     
     def checks(cls, val, allowed_vals):
         if val not in allowed_vals:
@@ -60,24 +56,11 @@ class ModelSetting:
                 f"optimizer,{self.optimizer},"
                 f"lr,{self.lr}'")
 
-def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, domain_file, time_limit=300, memory_limit = 4*1024*1024):
-    raise NotImplementedError
-    def get_train_instances(train_dir):
-        return [os.path.join(train_dir, f) for f in os.listdir(train_dir) if f.endswith(".pddl")]
+def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, OUTPUT_DIR, domain_file, time_limit=300, memory_limit = 4*1024*1024):
+    train_dir = os.path.join(WORKING_DIR, "train")
+    test_dir = os.path.join(WORKING_DIR, "test")
 
-    def get_test_instances(test_dir=None):
-        if test_dir is None:
-            return []
-        else:
-            pass
-    
-    def get_executable(repo_learning, file_name, **options):
-        pass
-
-    def generate_model_settings():
-        # This will be predefined:
-        
-        adam = ModelSetting(
+    adam = ModelSetting(
             layers_num=4,
             hidden_size=64,
             conv_type="SAGEConv",
@@ -85,8 +68,7 @@ def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, domain_file, time_limit=30
             optimizer="Adam",
             lr=0.001
         )
-
-        sgd = ModelSetting(
+    sgd = ModelSetting(
             layers_num=4,
             hidden_size=64,
             conv_type="SAGEConv",
@@ -94,13 +76,25 @@ def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, domain_file, time_limit=30
             optimizer="RMSprop",
             lr=0.001
         )
+    settings = [adam.to_parameter_string(), sgd.to_parameter_string()]
+    for setting_str in settings:
+        Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, OUTPUT_DIR, "--model-settings", setting_str], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 
-        settings = [adam.to_parameter_string(), sgd.to_parameter_string()]
-        for setting_str in settings:
-            Call("python src/train.py train test workspace --model-settings"+ " "+setting_str)
+#######################################
+    # def get_train_instances(train_dir):
+    #     return [os.path.join(train_dir, f) for f in os.listdir(train_dir) if f.endswith(".pddl")]
 
+    # def get_test_instances(test_dir=None):
+    #     if test_dir is None:
+    #         return []
+    #     else:
+    #         pass
+    
+    # def get_executable(repo_learning, file_name, **options):
+    #     pass
 
-    # models_dir
+    # def generate_model_settings():
+    #     pass
 
 
 

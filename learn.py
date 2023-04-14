@@ -89,8 +89,9 @@ def main():
              # ...
 
     # run_step_gnn_learning(
-    #     REPO_LEARNING=REPO_LEARNING,
-    #     WORKING_DIR=os.path.join(TRAINING_DIR, "gnn-learning"),
+    #     REPO_LEARNING=REPO_GNN_LEARNING,
+    #     WORKING_DIR=os.path.join(TRAINING_DIR, "gnn-data"),
+    #     OUTPUT_DIR=os.path.join(TRAINING_DIR, "gnn-learning"),
     #     domain_file=args.domain,
     #     time_limit=300,
     #     memory_limit=4 *1024 *1024
