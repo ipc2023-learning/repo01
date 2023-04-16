@@ -39,6 +39,7 @@ def get_configs(portfolio):
 
 def main():
     args = parse_args()
+    best_model_path = os.join.path(args.dk, "best_model/model.pt")
     configs = get_configs(args.domain_knowledge)
     _, config = configs[0]
     subprocess.check_call([sys.executable, TRANSLATE, args.domain, args.problem])
@@ -46,6 +47,11 @@ def main():
         subprocess.check_call([PREPROCESS], stdin=f)
     with open("output") as f:
         subprocess.check_call([SEARCH, "--plan-file", args.plan] + config, stdin=f)
+
+./plan DK problems/p1.pddl satellite
+# CONFIG = make_config(config_file_path) -> 
+
+./scorpion/fast-downward.py --alias lama --transform-task-options gnn-retries,3,gnn-threshold,0.5 --transform-task src/preprocessor.command {PROBLEM}
 
 
 if __name__ == "__main__":

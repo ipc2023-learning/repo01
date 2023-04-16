@@ -43,10 +43,12 @@ def main():
 
     REPO_GOOD_OPERATORS = f"{ROOT}/fd-symbolic"
     REPO_LEARNING = f"{ROOT}/learning"
-    REPO_GNN_LEARNING = f"{ROOT}/gnn-learning"
     BENCHMARKS_DIR = f"{TRAINING_DIR}/instances-training"
     INSTANCES_SMAC = f"{TRAINING_DIR}/instances-smac"
-    REPO_PARTIAL_GROUNDING = f"{ROOT}/fd-partial-grounding"
+
+    REPO_GNN_LEARNING = f"{ROOT}/gnn-learning"
+    GNN_DATA_DIR = f"{TRAINING_DIR}/gnn-data"
+    GNN_LEARNING_DIR = f"{TRAINING_DIR}/gnn-learning"
 
     if os.path.exists(TRAINING_DIR):
         shutil.rmtree(TRAINING_DIR)
@@ -69,40 +71,35 @@ def main():
 
     run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
-    # https://gitlab.com/atorralba/ipc-2023-gnn/-/issues/2
-    # Option first is that we will have 2 dirs that follow the some naming convention: eg for problem1.pddl, we have problem1 and problem1.sas
-        # good_operators_dir
-        # output_sas_dir
-    # Option 2 is that we will have 1 dir that has the same name as the problem and inside it we have the sas file and the good operators file 
+    # from training.gnn_training import run_step_gnn_learning
+    # from training.generate_gnn_data import run_step_generate_gnn_data
+    # run_generate_graph_objects:
+    # TODO
+    data_folders = []
+    good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
+    gnn_data_good_ops = f'{GNN_DATA_DIR}/good-operators-unit'
+    gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/good-operators-unit'
+    # x2 = f'{TRAINING_DIR}/lama'
+    # y2 = f'{GNN_DATA_DIR}/lama'
+    data_folders.append((good_operators_data, gnn_data_good_ops, "good_operators"))
+    # data_folders.append((x2, y2))
 
-    # nonetheless, we will make a separate dir, where each of the problems is a specific dir that stores graph objects (csv), and the good operators file
+    for problems_dir, output_dir, good_action_file_name in data_folders:
+        run_step_generate_gnn_data(
+            REPO_GNN_LEARNING=REPO_GNN_LEARNING,
+            PROBLEMS_DIR=problems_dir,
+            OUTPUT_DIR=output_dir,
+            good_actions_file_name=good_action_file_name,
+        )
+    
+    run_step_gnn_learning(
+        REPO_LEARNING=REPO_GNN_LEARNING,
+        problems_dir=gnn_data_good_ops,
+        output_dir=gnn_model_data_good_ops,
+        time_limit=300,
+        memory_limit=4 *1024 *1024
+    )
 
-    # run_generate_graph_objects:    
-    # run_step_generate_gnn_data(REPO_GNN_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/gnn-data')
-
-    # train_dir = some
-    # something
-       # problem1
-              # nodes.csv
-              # edges.csv
-       # problem 2
-             # ...
-
-    # run_step_gnn_learning(
-    #     REPO_LEARNING=REPO_GNN_LEARNING,
-    #     WORKING_DIR=os.path.join(TRAINING_DIR, "gnn-data"),
-    #     OUTPUT_DIR=os.path.join(TRAINING_DIR, "gnn-learning"),
-    #     domain_file=args.domain,
-    #     time_limit=300,
-    #     memory_limit=4 *1024 *1024
-    # )
-    # Only do this if the domain has action cost:
-    # run_step_good_operators(f'{TRAINING_DIR}/good-operators', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_TRAINING, fetch_everything=True,)
-
-    #TODO: set time and memory limits
-    #TODO: train also without good operators
-    run_step_partial_grounding_rules(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-rules', args.domain)
-    run_step_partial_grounding_aleph(REPO_LEARNING, f'{TRAINING_DIR}/good-operators-unit', f'{TRAINING_DIR}/partial-grounding-aleph', args.domain)
 
 if __name__ == "__main__":
     main()

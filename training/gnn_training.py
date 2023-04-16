@@ -56,9 +56,30 @@ class ModelSetting:
                 f"optimizer,{self.optimizer},"
                 f"lr,{self.lr}'")
 
-def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, OUTPUT_DIR, domain_file, time_limit=300, memory_limit = 4*1024*1024):
-    train_dir = os.path.join(WORKING_DIR, "train")
-    test_dir = os.path.join(WORKING_DIR, "test")
+def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, time_limit=300, memory_limit = 4*1024*1024):
+    train_dir = os.path.join(problems_dir, "train")
+    test_dir = os.path.join(problems_dir, "test")
+    problems = os.listdir(problems_dir)
+    import shutil
+    if os.path.exists(train_dir):
+        shutil.rmtree(train_dir)
+    os.mkdir(train_dir)
+    if os.path.exists(test_dir):
+        shutil.rmtree(test_dir)
+    os.mkdir(test_dir)
+
+
+    # TODO TEMPORARY
+    def split_instances(problems_dir, problems, train_dir, test_dir):
+        for problem in problems:
+            original_problem_dir = os.path.join(problems_dir, problem)
+            dst = os.path.join(train_dir, problem)
+            shutil.copytree(original_problem_dir, dst)
+            
+
+    split_instances(problems_dir, problems, train_dir, test_dir)
+    assert len(os.listdir(train_dir)) == len(problems)
+    assert os.listdir(test_dir) == []
 
     adam = ModelSetting(
             layers_num=4,
@@ -78,7 +99,7 @@ def run_step_gnn_learning(REPO_LEARNING, WORKING_DIR, OUTPUT_DIR, domain_file, t
         )
     settings = [adam.to_parameter_string(), sgd.to_parameter_string()]
     for setting_str in settings:
-        Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, OUTPUT_DIR, "--model-settings", setting_str], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
+        Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting_str], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 
 #######################################
     # def get_train_instances(train_dir):
