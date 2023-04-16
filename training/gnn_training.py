@@ -25,6 +25,18 @@ OPTIMIZER_CLASSES = {
     "Adagrad"
 }
 
+@dataclass
+class PreprocessorSettings:
+    gnn_retries: int
+    gnn_threshold: float
+
+    def __post_init__(self):
+        self.gnn_retries = int(self.gnn_retries)
+        self.gnn_threshold = float(self.gnn_threshold)
+
+    def to_parameter_string(self):
+        return (f"gnn-retries,{self.gnn_retries},"
+                f"gnn-threshold,{self.gnn_threshold}")
 
 @dataclass
 class ModelSetting:
@@ -49,14 +61,22 @@ class ModelSetting:
             raise ValueError(f"Value {val} not supported.")
 
     def to_parameter_string(self):
-        return (f"'layers_num,{self.layers_num},"
+        return (f"layers_num,{self.layers_num},"
                 f"hidden_size,{self.hidden_size},"
                 f"conv_type,{self.conv_type},"
                 f"aggr,{self.aggr},"
                 f"optimizer,{self.optimizer},"
-                f"lr,{self.lr}'")
+                f"lr,{self.lr}")
+    
+    def to_parameter_string_comma(self):
+        return (f"{self.layers_num},"
+                f"{self.hidden_size},"
+                f"{self.conv_type},"
+                f"{self.aggr},"
+                f"{self.optimizer},"
+                f"{self.lr}")
 
-def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, time_limit=300, memory_limit = 4*1024*1024):
+def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir, time_limit=300, memory_limit = 4*1024*1024):
     train_dir = os.path.join(problems_dir, "train")
     test_dir = os.path.join(problems_dir, "test")
     problems = os.listdir(problems_dir)
@@ -101,29 +121,26 @@ def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, time_limit=30
     for setting_str in settings:
         Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting_str], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 
-#######################################
-    # def get_train_instances(train_dir):
-    #     return [os.path.join(train_dir, f) for f in os.listdir(train_dir) if f.endswith(".pddl")]
+    # Make domain knowledge folder
+    DK_DIR = os.path.join(training_dir, "DK")
+    if os.path.exists(DK_DIR):
+        shutil.rmtree(DK_DIR)
+    os.mkdir(DK_DIR)
 
-    # def get_test_instances(test_dir=None):
-    #     if test_dir is None:
-    #         return []
-    #     else:
-    #         pass
-    
-    # def get_executable(repo_learning, file_name, **options):
-    #     pass
+    # TODO: Selection of the best model here
 
-    # def generate_model_settings():
-    #     pass
+    # Copy the best model to the DK folder
+    best_model = os.path.join(output_dir, "models", "4-64-SAGEConv-mean-Adam-0.001", "0.pt")
+    shutil.copy(best_model, os.path.join(DK_DIR, "model.pt"))
 
+    # TODO: Save model settings as string in the DK folder
+    with open(os.path.join(DK_DIR, "model_settings.txt"), "w") as f:
+        f.write(adam.to_parameter_string_comma())
 
-
-
-# for each problem passed as the --path/problem.pddl
-# we put them to the directory: data/instances_training/problem.pddl
-# This will return good_operators file for each data/instances_trainng/name.pddl --> data/good-operators-unit/name
-
-
-
-# ja proponuje pod training zrobic kolejny plik tkroy sie nazywa make gnn files, ktory uruchomimy z learn.py
+    # TODO: Save the preprocessor settings as string to the DK folder
+    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5)
+    with open(os.path.join(DK_DIR, "preprocessor_settings.txt"), "w") as f:
+        f.write(preprocessor_settings.to_parameter_string())
+        
+    # DK_DIR into zip file
+    shutil.make_archive(DK_DIR, 'zip', DK_DIR)

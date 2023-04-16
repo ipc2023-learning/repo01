@@ -6,14 +6,10 @@ import argparse
 import os.path
 import subprocess
 import sys
+import shutil
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-CEDALION = os.path.join(ROOT, "cedalion")
-TRANSLATE = os.path.join(CEDALION, "src", "translate", "translate.py")
-PREPROCESS = os.path.join(CEDALION, "src", "preprocess", "preprocess")
-SEARCH = os.path.join(CEDALION, "src", "search", "downward-release")
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -24,34 +20,32 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_configs(portfolio):
-    attributes = {}
-    with open(portfolio) as portfolio_file:
-        content = portfolio_file.read()
-        try:
-            exec(content, attributes)
-        except Exception:
-            sys.exit("The file %s could not be loaded" % portfolio)
-    if "configs" not in attributes:
-        sys.exit("portfolio %s must define configs" % portfolio)
-    return attributes["configs"]
-
-
 def main():
     args = parse_args()
-    best_model_path = os.join.path(args.dk, "best_model/model.pt")
-    configs = get_configs(args.domain_knowledge)
-    _, config = configs[0]
-    subprocess.check_call([sys.executable, TRANSLATE, args.domain, args.problem])
-    with open("output.sas") as f:
-        subprocess.check_call([PREPROCESS], stdin=f)
-    with open("output") as f:
-        subprocess.check_call([SEARCH, "--plan-file", args.plan] + config, stdin=f)
+    # best_model_path = os.join.path(args.dk, "best_model/model.pt")
 
-./plan DK problems/p1.pddl satellite
-# CONFIG = make_config(config_file_path) -> 
+    ROOT = os.path.dirname(os.path.abspath(__file__))
+    REPO_GNN_LEARNING = f"{ROOT}/gnn-learning"
+    SCORPION_PATH = f"{ROOT}/scorpion"
 
-./scorpion/fast-downward.py --alias lama --transform-task-options gnn-retries,3,gnn-threshold,0.5 --transform-task src/preprocessor.command {PROBLEM}
+    DK_DIR_FILE = args.domain_knowledge
+    DOMAIN = args.domain
+    PROBLEM = args.problem
+    PLAN_OUT = args.plan
+    
+    DK_DIR = f'{ROOT}/DK'
+
+    shutil.unpack_archive(DK_DIR_FILE, DK_DIR ,'zip')
+    
+    model_path = os.path.join(DK_DIR, "model.pt")
+    preprocessor_settings = os.path.join(DK_DIR, "preprocessor_settings.txt")
+
+    # Read preprocessor settings as string
+    with open(preprocessor_settings, "r") as f:
+        preprocessor_settings = f.read()
+
+    subprocess.check_call([f'{SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{REPO_GNN_LEARNING}/src/preprocessor.command', DOMAIN, PROBLEM])
+
 
 
 if __name__ == "__main__":

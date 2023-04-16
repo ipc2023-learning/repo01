@@ -96,6 +96,7 @@ def main():
         REPO_LEARNING=REPO_GNN_LEARNING,
         problems_dir=gnn_data_good_ops,
         output_dir=gnn_model_data_good_ops,
+        training_dir=TRAINING_DIR,
         time_limit=300,
         memory_limit=4 *1024 *1024
     )
