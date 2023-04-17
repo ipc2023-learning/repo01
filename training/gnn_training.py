@@ -1,5 +1,8 @@
 import os
 import sys
+import math
+import shutil
+import json
 from lab.calls.call import Call
 from dataclasses import dataclass
 
@@ -80,7 +83,7 @@ def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir,
     train_dir = os.path.join(problems_dir, "train")
     test_dir = os.path.join(problems_dir, "test")
     problems = os.listdir(problems_dir)
-    import shutil
+
     if os.path.exists(train_dir):
         shutil.rmtree(train_dir)
     os.mkdir(train_dir)
@@ -130,8 +133,8 @@ def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir,
     # TODO: Selection of the best model here
 
     # Copy the best model to the DK folder
-    best_model = os.path.join(output_dir, "models", "4-64-SAGEConv-mean-Adam-0.001", "0.pt")
-    shutil.copy(best_model, os.path.join(DK_DIR, "model.pt"))
+    best_model_path = choose_best_model(output_dir, default=True)
+    shutil.copy(best_model_path, os.path.join(DK_DIR, "model.pt"))
 
     # TODO: Save model settings as string in the DK folder
     with open(os.path.join(DK_DIR, "model_settings.txt"), "w") as f:
@@ -144,3 +147,53 @@ def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir,
         
     # DK_DIR into zip file
     shutil.make_archive(DK_DIR, 'zip', DK_DIR)
+
+
+def choose_best_model(output_dir, default=True):
+    if default:
+        return os.path.join(output_dir, "models", "4-64-SAGEConv-mean-Adam-0.001", "0.pt")
+    
+    # For each of our good_actions recognision strategies get the dirs
+    # Example:
+        # - good-operators-unit
+        # - lama
+        # - mixed
+
+    # Setup the best model path and score
+    best_model_path, best_model_score = None, math.inf
+
+    # Get all folders under output_dir/models
+    model_actions_strategies_dir = os.listdir(output_dir)
+
+    # for each [good-operators-unit, lama, mixed]
+    for recognision_strategy in model_actions_strategies_dir:
+        # Get all architectures under the recognision strategy
+        model_architecture_dirs = os.listdir(os.path.join(output_dir, recognision_strategy))
+        for model_architecture_dir in model_architecture_dirs:
+            actual_path = os.path.join(output_dir, recognision_strategy, model_architecture_dir)
+            best_model_for_architecture_path, architecture_best_score = get_best_model_for_architecture(actual_path)
+                
+            if architecture_best_score < best_model_score:
+                best_model_score = architecture_best_score
+                best_model_path = best_model_for_architecture_path
+
+    return best_model_path
+
+def get_best_model_for_architecture(model_architecture_dir):
+        # For each [4-64-SAGEConv-mean-Adam-0.001, 4-64-SAGEConv-mean-RMSprop-0.001]
+    
+        with open(os.path.join(model_architecture_dir, "scores.json")) as f:
+            scores_dict = json.load(f)
+        
+        # Get path of the model with the lowest score
+        cur_max = math.inf
+        cur_max_path = None
+        for model_file_name, score in scores_dict.items():
+            if score < cur_max:
+                cur_max = score
+                cur_max_path = os.path.join(model_architecture_dir, model_file_name)
+        
+        assert cur_max_path is not None, f"No best model found for the model architecture{model_architecture_dir}"
+
+        return os.path.join(model_architecture_dir,cur_max_path), cur_max
+

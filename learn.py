@@ -13,9 +13,6 @@ from lab.environments import  LocalEnvironment
 
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
-from good_operator_experiment import run_step_good_operators
-from partial_grounding_rules import run_step_partial_grounding_rules
-from partial_grounding_aleph import run_step_partial_grounding_aleph
 from gnn_training import run_step_gnn_learning
 from generate_gnn_data import run_step_generate_gnn_data
 
