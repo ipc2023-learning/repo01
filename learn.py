@@ -54,6 +54,10 @@ def main():
         shutil.rmtree(TRAINING_DIR)
     os.mkdir(TRAINING_DIR)
 
+     ############################ Setup directories ############################
+     ############################   To be removed   ############################
+    shutil.copytree("hypertunning", f"{TRAINING_DIR}/hypertunning")
+
     # Copy all input benchmarks to the directory
     os.mkdir(BENCHMARKS_DIR)
     shutil.copy(args.domain, BENCHMARKS_DIR)
@@ -69,16 +73,21 @@ def main():
     ENV = LocalEnvironment(processes=args.cpus)
     SUITE_TRAINING = suites.build_suite(TRAINING_DIR, ['instances-training'])
 
-    run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
+    # run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
 
     # from training.gnn_training import run_step_gnn_learning
     # from training.generate_gnn_data import run_step_generate_gnn_data
     # run_generate_graph_objects:
     # TODO
     data_folders = []
-    good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
-    gnn_data_good_ops = f'{GNN_DATA_DIR}/good-operators-unit'
-    gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/good-operators-unit'
+    # good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
+    # gnn_data_good_ops = f'{GNN_DATA_DIR}/good-operators-unit'
+    # gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/good-operators-unit'
+     
+    good_operators_data = f'{TRAINING_DIR}/hypertunning'
+    gnn_data_good_ops = f'{GNN_DATA_DIR}/hypertunning'
+    gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/hypertunning'
+
     # x2 = f'{TRAINING_DIR}/lama'
     # y2 = f'{GNN_DATA_DIR}/lama'
     data_folders.append((good_operators_data, gnn_data_good_ops, "good_operators"))
