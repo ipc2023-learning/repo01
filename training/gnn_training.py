@@ -82,19 +82,25 @@ class ModelSetting:
 def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir, time_limit=300, memory_limit = 4*1024*1024):
     train_dir = os.path.join(problems_dir, "train")
     test_dir = os.path.join(problems_dir, "test")
-    problems = os.listdir(problems_dir)
+
 
     if os.path.exists(train_dir):
         shutil.rmtree(train_dir)
-    os.mkdir(train_dir)
     if os.path.exists(test_dir):
         shutil.rmtree(test_dir)
+
+    problems = os.listdir(problems_dir)
+    number_of_problems = len(problems)
+    
+    os.mkdir(train_dir)
     os.mkdir(test_dir)
 
 
     # TODO TEMPORARY
     def split_instances(problems_dir, problems, train_dir, test_dir):
         for problem in problems:
+            if problem == "train" or problem == "test":
+                continue
             original_problem_dir = os.path.join(problems_dir, problem)
             dst = os.path.join(train_dir, problem)
             shutil.copytree(original_problem_dir, dst)
@@ -102,7 +108,14 @@ def run_step_gnn_learning(REPO_LEARNING, problems_dir, output_dir, training_dir,
 
     split_instances(problems_dir, problems, train_dir, test_dir)
     assert len(os.listdir(train_dir)) == len(problems)
-    assert os.listdir(test_dir) == []
+    assert len(os.listdir(train_dir)) == number_of_problems
+
+    train_size = len(os.listdir(train_dir))
+    test_size = len(os.listdir(test_dir))
+
+    # TODO REMOVE THAT
+    assert test_size == 0
+    assert train_size + test_size == number_of_problems
 
     adam = ModelSetting(
             layers_num=4,

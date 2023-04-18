@@ -11,10 +11,34 @@ import sys
 from lab.calls.call import Call
 from lab.environments import  LocalEnvironment
 
+debug=False
+
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
-from gnn_training import run_step_gnn_learning
-from generate_gnn_data import run_step_generate_gnn_data
+if debug:
+    from training.gnn_training import run_step_gnn_learning
+    from training.generate_gnn_data import run_step_generate_gnn_data
+    from training.run_experiment import RunExperiment
+    from training.utils import (
+        select_instances,
+        select_instances_with_properties,
+        save_model,
+    )
+    from training.optimize_smac import run_smac
+
+else:
+    from gnn_training import run_step_gnn_learning
+    from generate_gnn_data import run_step_generate_gnn_data
+    from run_experiment import RunExperiment
+    from utils import (
+        select_instances,
+        select_instances_with_properties,
+        save_model,
+    )
+    from optimize_smac import run_smac
+
+
+
 
 from downward import suites
 
@@ -40,54 +64,62 @@ def main():
 
     REPO_GOOD_OPERATORS = f"{ROOT}/fd-symbolic"
     REPO_LEARNING = f"{ROOT}/learning"
-    BENCHMARKS_DIR = f"{TRAINING_DIR}/instances-training"
+    BENCHMARKS_DIR = f"{TRAINING_DIR}/instances"
     INSTANCES_SMAC = f"{TRAINING_DIR}/instances-smac"
 
     REPO_GNN_LEARNING = f"{ROOT}/gnn-learning"
     GNN_DATA_DIR = f"{TRAINING_DIR}/gnn-data"
     GNN_LEARNING_DIR = f"{TRAINING_DIR}/gnn-learning"
 
+
     if os.path.exists(TRAINING_DIR):
         shutil.rmtree(TRAINING_DIR)
     os.mkdir(TRAINING_DIR)
 
-     ############################ Setup directories ############################
-     ############################   To be removed   ############################
-    shutil.copytree("hypertunning", f"{TRAINING_DIR}/hypertunning")
-
     # Copy all input benchmarks to the directory
-    os.mkdir(BENCHMARKS_DIR)
-    shutil.copy(args.domain, BENCHMARKS_DIR)
+    if os.path.isdir(args.domain): # If the first argument is a folder instead of a domain file
+        shutil.copytree(args.domain, BENCHMARKS_DIR)
+        args.domain += "/domain.pddl"
+    else:
+        os.mkdir(BENCHMARKS_DIR)
+        shutil.copy(args.domain, BENCHMARKS_DIR)
+        for problem in args.problem:
+            shutil.copy(problem, BENCHMARKS_DIR)
 
-    # os.mkdir(INSTANCES_SMAC)
-    # shutil.copy(args.domain, INSTANCES_SMAC)
-
-    for problem in args.problem:
-        # TODO Split instances in some way and only put some on instances smac
-        shutil.copy(problem, BENCHMARKS_DIR)
-        # shutil.copy(problem, INSTANCES_SMAC)
     
     ENV = LocalEnvironment(processes=args.cpus)
-    SUITE_TRAINING = suites.build_suite(TRAINING_DIR, ['instances-training'])
+    SUITE_ALL = suites.build_suite(TRAINING_DIR, ['instances'])
 
-    # run_step_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_TRAINING, fetch_everything=True,)
+    # Overall time limit is 10s and 1G # TODO: Set suitable time and memory limit
+    RUN = RunExperiment (10, 1000)
 
-    # from training.gnn_training import run_step_gnn_learning
-    # from training.generate_gnn_data import run_step_generate_gnn_data
-    # run_generate_graph_objects:
+    # Run lama, with empty config and using the alias
+    RUN.run_planner(f'{TRAINING_DIR}/runs-lama', f"{ROOT}/fd-symbolic", [], ENV, SUITE_ALL, driver_options = ["--alias", "lama-first"])
+
+    # We run the good operators tool only on instances solved by lama in less than 30 seconds
+    instances = select_instances(f'{TRAINING_DIR}/runs-lama', lambda p : p['search_time'] < 30)
+    SUITE_GOOD_OPERATORS = suites.build_suite(TRAINING_DIR, [f'instances:{name}.pddl' for name in instances])
+    RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_GOOD_OPERATORS)
+
+    has_action_cost = len(select_instances(f'{TRAINING_DIR}/good-operators-unit', lambda p : p['use_metric'])) > 0
+    if has_action_cost:
+        RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-cost', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_GOOD_OPERATORS)
+
     # TODO
     data_folders = []
-    # good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
-    # gnn_data_good_ops = f'{GNN_DATA_DIR}/good-operators-unit'
-    # gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/good-operators-unit'
+    good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
+    gnn_data_good_ops = f'{GNN_DATA_DIR}/good-operators-unit'
+    gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/good-operators-unit'
+
+    lama_operators_data = f'{TRAINING_DIR}/runs-lama'
+    gnn_data_lama_ops = f'{GNN_DATA_DIR}/runs-lama'
+    gnn_model_data_lama_ops = f'{GNN_LEARNING_DIR}/runs-lama'
      
-    good_operators_data = f'{TRAINING_DIR}/hypertunning'
-    gnn_data_good_ops = f'{GNN_DATA_DIR}/hypertunning'
-    gnn_model_data_good_ops = f'{GNN_LEARNING_DIR}/hypertunning'
 
     # x2 = f'{TRAINING_DIR}/lama'
     # y2 = f'{GNN_DATA_DIR}/lama'
     data_folders.append((good_operators_data, gnn_data_good_ops, "good_operators"))
+    data_folders.append((lama_operators_data, gnn_data_lama_ops, "sas_plan"))
     # data_folders.append((x2, y2))
 
     for problems_dir, output_dir, good_action_file_name in data_folders:
@@ -102,6 +134,15 @@ def main():
         REPO_LEARNING=REPO_GNN_LEARNING,
         problems_dir=gnn_data_good_ops,
         output_dir=gnn_model_data_good_ops,
+        training_dir=TRAINING_DIR,
+        time_limit=300,
+        memory_limit=4 *1024 *1024
+    )
+
+    run_step_gnn_learning(
+        REPO_LEARNING=REPO_GNN_LEARNING,
+        problems_dir=gnn_data_good_ops,
+        output_dir=gnn_model_data_lama_ops,
         training_dir=TRAINING_DIR,
         time_limit=300,
         memory_limit=4 *1024 *1024
