@@ -148,6 +148,12 @@ def main():
         memory_limit=4 *1024 *1024
     )
 
+    SMAC_INSTANCES = select_instances_with_properties(f'{TRAINING_DIR}/runs-lama', lambda p : p['search_time'] < 30, ['translator_operators', 'translator_facts', 'translator_variables'])
+    assert (len(SMAC_INSTANCES))
+
+    print(f"SMAC instances: {SMAC_INSTANCES}")
+
+    run_smac(f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1)
 
 if __name__ == "__main__":
     main()
