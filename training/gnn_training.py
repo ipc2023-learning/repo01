@@ -3,7 +3,7 @@ import sys
 import shutil
 import subprocess
 from lab.calls.call import Call
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 CONVOLUTIONS = {
     "SAGEConv",
@@ -28,7 +28,7 @@ OPTIMIZER_CLASSES = {
     "Adagrad"
 }
 
-def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_dir, DATA_DIR, time_limit=300, memory_limit = 4*1024*1024):
+def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_dir, output_dir, time_limit=300, memory_limit = 4*1024*1024):
     train_dir = os.path.join(problems_dir, "train")
     test_dir = os.path.join(problems_dir, "test")
 
@@ -66,7 +66,7 @@ def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_di
     assert test_size == 0
     assert train_size + test_size == number_of_problems
 
-    setting = model_settings.to_parameter_string()
+    setting = model_setting.to_parameter_string()
     # command = [sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting]
     # proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -89,7 +89,7 @@ def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_di
     # return new_model_path
 
     # Assert the file exisits
-    model_path = f'{output_dir}/models/{model_settings.dir_name}/0.pt'
+    model_path = f'{output_dir}/models/{model_setting.dir_name}/0.pt'
     assert os.path.exists(model_path), f"Model path {model_path} does not exist"
     if not os.path.exists(model_path):
         return None
@@ -193,6 +193,7 @@ class ModelSetting:
     aggr: str
     optimizer: str
     lr: float
+    model_specific_kwargs: dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.layers_num = int(self.layers_num)
