@@ -135,6 +135,7 @@ def parse_config(config):
 # with LAMA accordingly. If we run SMAC multiple times, we can use different instances
 # set, as well as changing the default configuration each time.
 def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers):
+    GNN_LEARNING_DIR = os.path.join(DATA_DIR, 'gnn-learning')
     DATA_DIR = os.path.abspath(DATA_DIR) # Make sure path is absolute so that symlinks work
     os.mkdir(WORKING_DIR)
 
@@ -177,13 +178,14 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     smac = HyperparameterOptimizationFacade(scenario, evaluator.target_function)
     incumbent = smac.optimize()
 
-    # print("Chosen configuration: ", incumbent)
 
-    model_setting, target_operator = parse_config(incumbent)
+    model_setting, target_folder = parse_config(incumbent)
+
+    path_to_best_model = os.path.join(GNN_LEARNING_DIR, target_folder, 'models', model_setting.dir_name, '0.pt')
     
     print("Chosen model settings: ", model_setting)
 
-
+    return path_to_best_model, model_setting
 
     # if 'trained' in  incumbent['queue_type']:
     #     candidate_models.copy_model_to_folder(incumbent, os.path.join(WORKING_DIR, 'incumbent'), symlink=False )

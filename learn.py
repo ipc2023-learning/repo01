@@ -27,7 +27,7 @@ if debug:
     from training.optimize_smac import run_smac
 
 else:
-    from gnn_training import run_step_gnn_learning
+    from gnn_training import run_step_gnn_learning, ModelSetting, PreprocessorSettings
     from generate_gnn_data import run_step_generate_gnn_data
     from run_experiment import RunExperiment
     from utils import (
@@ -137,34 +137,31 @@ def main():
         )
 
 
-        
-    
-    # run_step_gnn_learning(
-    #     REPO_LEARNING=REPO_GNN_LEARNING,
-    #     problems_dir=gnn_data_good_ops,
-    #     output_dir=gnn_model_data_good_ops,
-    #     training_dir=TRAINING_DIR,
-    #     time_limit=300,
-    #     memory_limit=4 *1024 *1024
-    # )
-
-    # run_step_gnn_learning(
-    #     REPO_LEARNING=REPO_GNN_LEARNING,
-    #     problems_dir=gnn_data_good_ops,
-    #     output_dir=gnn_model_data_lama_ops,
-    #     training_dir=TRAINING_DIR,
-    #     time_limit=300,
-    #     memory_limit=4 *1024 *1024
-    # )
-
-
-
+    DK_DIR = os.path.join(TRAINING_DIR, "DK")
+    if os.path.exists(DK_DIR):
+        shutil.rmtree(DK_DIR)
+    os.mkdir(DK_DIR)
     
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
   
 
-    run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1)
+    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1)
+
+    # Copy the best model to the DK folder
+    model_path = shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')
+
+    # TODO: Save model settings as string in the DK folder
+    with open(os.path.join(DK_DIR, "model_settings.txt"), "w") as f:
+        f.write(model_setting.to_parameter_string_comma())
+        
+    # TODO: Save the preprocessor settings as string to the DK folder
+    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path=model_path)
+    with open(os.path.join(DK_DIR, "preprocessor_settings.txt"), "w") as f:
+        f.write(preprocessor_settings.to_parameter_string())
+
+    # DK_DIR into zip file
+    shutil.make_archive(DK_DIR, 'zip', DK_DIR)
 
 if __name__ == "__main__":
     main()
