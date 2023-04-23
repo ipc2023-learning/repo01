@@ -2,6 +2,7 @@ from ConfigSpace import Categorical, Float, Configuration, ConfigurationSpace, I
 from smac import HyperparameterOptimizationFacade, Scenario
 
 from lab.calls.call import Call
+from gnn_training import ModelSetting, run_step_gnn_learning
 
 import sys
 import os
@@ -26,10 +27,14 @@ INTERMEDIATE_SMAC_MODELS = 'intermediate-smac-models'
 
 
 class Eval:
-    def __init__(self, DATA_DIR, WORKING_DIR, domain_file, instances_dir):
+    def __init__(self, ROOT, DATA_DIR, WORKING_DIR, domain_file, instances_dir):
         self.DATA_DIR = DATA_DIR
         self.MY_DIR = os.path.dirname(os.path.realpath(__file__))
-        self.GNN_LEARNING_DIR = os.path.join(self.MY_DIR, "gnn-learning", "src")
+        self.GNN_REPO_DIR = os.path.join(os.path.join(ROOT, "gnn-learning"))
+        self.GNN_DATA_DIR = os.path.join(self.DATA_DIR, "gnn-data")
+        self.GNN_LEARNING_DIR = os.path.join(self.DATA_DIR, "gnn-learning")
+
+        self.SCORPION_PATH = os.path.join(ROOT, "scorpion")
         # self.candidate_models=candidate_models
 
         self.SMAC_MODELS_DIR = os.path.abspath(os.path.join(WORKING_DIR, INTERMEDIATE_SMAC_MODELS))
@@ -44,18 +49,20 @@ class Eval:
         self.regex_plan_cost = re.compile(rb"\[t=.*s, .* KB\] Plan cost:\s(.+)\n", re.MULTILINE)
         self.regex_no_solution = re.compile(rb"\[t=.*KB\] Completely explored state space.*no solution.*", re.MULTILINE)
 
-    def target_function(self, config: Configuration,  seed: int) -> float:
-        print("config: ", config)
-        print("instance: ", instance)
+    def target_function(self, config: Configuration, instance: str, seed: int) -> float:
+        model_settings, target_folder = parse_config(config)
+            
+        print(f"Running {instance} with {model_settings} and {target_folder}")
 
-        setting_str = json.dumps(config.get_dictionary())
-        print("setting_str: ", setting_str)
+        model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}', self.DATA_DIR)
 
-        3/0
+        if model_path is None:
+            return 10000000
 
-        command = [sys.executable, f'{self.GNN_LEARNING_DIR}/train.py', train_dir, test_dir, output_dir, "--model-settings", setting_str]
+        command = f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{REPO_GNN_LEARNING}/src/preprocessor.command', DOMAIN, PROBLEM]
         # command = [sys.executable, f'{self.GNN_LEARNING_DIR}/train.py']
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
         try:
             output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
@@ -97,6 +104,24 @@ class Eval:
             print("Output: ", output.decode())
             if error_output:
                 print("Error Output: ", error_output.decode())
+
+
+def parse_config(config):
+    config_dict = config.get_dictionary()
+
+    modelSettingsDict = {
+        'aggr': config_dict['aggr'],
+        'conv_type': config_dict['conv_type'],
+        'hidden_size': config_dict['hidden_size'],
+        'layers_num': config_dict['layers_num'],
+        'lr': config_dict['lr'],
+        'optimizer': config_dict['optimizer'],
+    }
+    targetOperators = config_dict['target_folder']
+
+    model_settings = ModelSetting.from_dict(modelSettingsDict)
+
+    return model_settings, targetOperators
 
 
     # def target_function (self, config: Configuration, instance: str, seed: int) -> float:
@@ -252,7 +277,7 @@ class Eval:
 # Note: default configuration should solve at least 50% of the instances. Pick instances
 # with LAMA accordingly. If we run SMAC multiple times, we can use different instances
 # set, as well as changing the default configuration each time.
-def run_smac(DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers):
+def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers):
     DATA_DIR = os.path.abspath(DATA_DIR) # Make sure path is absolute so that symlinks work
 
     ## Configuration Space ##
@@ -270,6 +295,7 @@ def run_smac(DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_fe
     ### Create model parameters
     #############################
 
+    target_folder = Categorical('target_folder', ['runs-lama', 'good-operators-unit'], default="good-operators-unit")
     layers_num = Categorical('layers_num', [3, 5, 7], default=3)
     hidden_size = Categorical('hidden_size', [64, 128, 256, 512], default=256)
     conv_type = Categorical('conv_type', ['SAGEConv', 'GATConv'], default='SAGEConv')
@@ -280,7 +306,7 @@ def run_smac(DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_fe
     # alias = Categorical ('alias', ['lama-first'], default='lama-first')
     # queue_type = Categorical("queue_type", ["trained", "roundrobintrained", "fifo", "lifo"], default='trained')
 
-    parameters = [layers_num, hidden_size, conv_type, aggr, optimizer, lr]
+    parameters = [target_folder, layers_num, hidden_size, conv_type, aggr, optimizer, lr]
     # conditions = []
 
     # for schema, models in candidate_models.sk_models_per_action_schema.items():
@@ -307,7 +333,7 @@ def run_smac(DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_fe
     cs.add_hyperparameters(parameters)
     # cs.add_conditions(conditions)
 
-    evaluator = Eval (DATA_DIR, WORKING_DIR, domain_file, instance_dir)
+    evaluator = Eval (ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir)
 
 
     print ([ins for ins in instances_with_features])
@@ -321,7 +347,6 @@ def run_smac(DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_fe
         instances=[ins for ins in instances_with_features],
         instance_features=instances_with_features
     )
-
     # Use SMAC to find the best configuration/hyperparameters
     smac = HyperparameterOptimizationFacade(scenario, evaluator.target_function)
     incumbent = smac.optimize()

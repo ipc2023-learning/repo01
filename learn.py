@@ -20,10 +20,10 @@ if debug:
     from training.generate_gnn_data import run_step_generate_gnn_data
     from training.run_experiment import RunExperiment
     from training.utils import (
-        select_instances,
         select_instances_with_properties,
         save_model,
     )
+    from training.instance_set import InstanceSet, select_instances_from_runs
     from training.optimize_smac import run_smac
 
 else:
@@ -31,10 +31,9 @@ else:
     from generate_gnn_data import run_step_generate_gnn_data
     from run_experiment import RunExperiment
     from utils import (
-        select_instances,
-        select_instances_with_properties,
         save_model,
     )
+    from instance_set import InstanceSet, select_instances_from_runs
     from optimize_smac import run_smac
 
 
@@ -93,18 +92,25 @@ def main():
     # Overall time limit is 10s and 1G # TODO: Set suitable time and memory limit
     RUN = RunExperiment (10, 1000)
 
-    # Run lama, with empty config and using the alias
-    RUN.run_planner(f'{TRAINING_DIR}/runs-lama', f"{ROOT}/fd-symbolic", [], ENV, SUITE_ALL, driver_options = ["--alias", "lama-first"])
+    RUN.run_planner(f'{TRAINING_DIR}/runs-lama', REPO_GOOD_OPERATORS, [], ENV, SUITE_ALL, driver_options = ["--alias", "lama-first"])
+
+    instances_manager = InstanceSet(f'{TRAINING_DIR}/runs-lama')
 
     # We run the good operators tool only on instances solved by lama in less than 30 seconds
-    instances = select_instances(f'{TRAINING_DIR}/runs-lama', lambda p : p['search_time'] < 30)
-    SUITE_GOOD_OPERATORS = suites.build_suite(TRAINING_DIR, [f'instances:{name}.pddl' for name in instances])
-    RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_GOOD_OPERATORS)
+    instances_to_run_good_operators = instances_manager.select_instances([lambda i, p : p['search_time'] < 30])
 
-    has_action_cost = len(select_instances(f'{TRAINING_DIR}/good-operators-unit', lambda p : p['use_metric'])) > 0
+    SUITE_GOOD_OPERATORS = suites.build_suite(TRAINING_DIR, [f'instances:{name}.pddl' for name in instances_to_run_good_operators])
+    RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_GOOD_OPERATORS)
+    instances_manager.add_training_data(f'{TRAINING_DIR}/good-operators-unit')
+
+    has_action_cost = len(select_instances_from_runs(f'{TRAINING_DIR}/good-operators-unit', lambda p : p['use_metric'])) > 0
     if has_action_cost:
         RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-cost', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_GOOD_OPERATORS)
+        instances_manager.add_training_data(f'{TRAINING_DIR}/good-operators-cost')
 
+    TRAINING_INSTANCES = instances_manager.split_training_instances()
+
+    
     # TODO
     data_folders = []
     good_operators_data = f'{TRAINING_DIR}/good-operators-unit'
@@ -129,31 +135,36 @@ def main():
             OUTPUT_DIR=output_dir,
             good_actions_file_name=good_action_file_name,
         )
+
+
+        
     
-    run_step_gnn_learning(
-        REPO_LEARNING=REPO_GNN_LEARNING,
-        problems_dir=gnn_data_good_ops,
-        output_dir=gnn_model_data_good_ops,
-        training_dir=TRAINING_DIR,
-        time_limit=300,
-        memory_limit=4 *1024 *1024
-    )
+    # run_step_gnn_learning(
+    #     REPO_LEARNING=REPO_GNN_LEARNING,
+    #     problems_dir=gnn_data_good_ops,
+    #     output_dir=gnn_model_data_good_ops,
+    #     training_dir=TRAINING_DIR,
+    #     time_limit=300,
+    #     memory_limit=4 *1024 *1024
+    # )
 
-    run_step_gnn_learning(
-        REPO_LEARNING=REPO_GNN_LEARNING,
-        problems_dir=gnn_data_good_ops,
-        output_dir=gnn_model_data_lama_ops,
-        training_dir=TRAINING_DIR,
-        time_limit=300,
-        memory_limit=4 *1024 *1024
-    )
+    # run_step_gnn_learning(
+    #     REPO_LEARNING=REPO_GNN_LEARNING,
+    #     problems_dir=gnn_data_good_ops,
+    #     output_dir=gnn_model_data_lama_ops,
+    #     training_dir=TRAINING_DIR,
+    #     time_limit=300,
+    #     memory_limit=4 *1024 *1024
+    # )
 
-    SMAC_INSTANCES = select_instances_with_properties(f'{TRAINING_DIR}/runs-lama', lambda p : p['search_time'] < 30, ['translator_operators', 'translator_facts', 'translator_variables'])
-    assert (len(SMAC_INSTANCES))
 
-    print(f"SMAC instances: {SMAC_INSTANCES}")
 
-    run_smac(f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1)
+    
+
+    SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
+  
+
+    run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1)
 
 if __name__ == "__main__":
     main()
