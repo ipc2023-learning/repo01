@@ -52,8 +52,8 @@ class Eval:
     def target_function(self, config: Configuration, instance: str, seed: int) -> float:
         model_settings, target_folder = parse_config(config)
 
-        DOMAIN = f'{self.DATA_DIR}/{self.domain_file}'
-        PROBLEM = f'{self.instances_dir}/{instance}'
+        DOMAIN = f'{self.instances_dir}/{self.domain_file}'
+        PROBLEM = f'{self.instances_dir}/{instance}.pddl'
 
         print(f"Running {instance} with {model_settings} and {target_folder}")
 
@@ -62,57 +62,66 @@ class Eval:
         if model_path is None:
             return 10000000
         
-        preprocessor_settings = PreprocessorSettings(
+        preprocessor_setting = PreprocessorSettings(
             model_path=model_path,
             gnn_retries=3,
             gnn_threshold=0.5
         ).to_parameter_string()
 
-
-        command = [f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM]
+        # Call([sys.executable, f'{self.SCORPION_PATH}/fast-downward.py','--alias', 'lama',  '--transform-task-options', preprocessor_setting, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM], "run-scorpion" ,time_limit=300, memory_limit = 4*1024*1024).wait()
+        command = [sys.executable, f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_setting, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+        
 
-        try:
-            output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
+        output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
 
-            total_time = self.regex_total_time.search(output)
-            num_operators = self.regex_operators.search(output)
-            plan_cost = self.regex_plan_cost.search(output)
+        print("Output: ", output.decode())
+        print("Output error: ", error_output.decode())
 
-            if total_time and num_operators and plan_cost:
-                total_time = float(total_time.group(1))
-                num_operators = float(num_operators.group(1))
-                plan_cost = float(plan_cost.group(1))
-                print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: time {total_time}, operators {num_operators}, cost {plan_cost}")
-                return num_operators
-            elif self.regex_no_solution.search(output):
-                print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to partial grounding")
-                #print(output.decode())
-                return 10000000
-            else:
-                print (f"WARNING: Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to unknown reasons")
+        return 10
 
-                print("Output: ", output.decode())
-                if error_output:
-                    print("Error Output: ", error_output.decode())
-                return 10000000
-        except subprocess.CalledProcessError:
-            print (f"WARNING: Command failed: {' '.join(command)}")
-            print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to crash")
-            return 10000000
 
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to time limit")
-            return 10000000
+        # try:
+        #     output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
 
-        except:
-            print (f"Error: Command failed: {' '.join(command)}")
+        #     total_time = self.regex_total_time.search(output)
+        #     num_operators = self.regex_operators.search(output)
+        #     plan_cost = self.regex_plan_cost.search(output)
 
-            print("Output: ", output.decode())
-            if error_output:
-                print("Error Output: ", error_output.decode())
+        #     if total_time and num_operators and plan_cost:
+        #         total_time = float(total_time.group(1))
+        #         num_operators = float(num_operators.group(1))
+        #         plan_cost = float(plan_cost.group(1))
+        #         print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: time {total_time}, operators {num_operators}, cost {plan_cost}")
+        #         return num_operators
+        #     elif self.regex_no_solution.search(output):
+        #         print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to partial grounding")
+        #         #print(output.decode())
+        #         return 10000000
+        #     else:
+        #         print (f"WARNING: Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to unknown reasons")
+
+        #         print("Output: ", output.decode())
+        #         if error_output:
+        #             print("Error Output: ", error_output.decode())
+        #         return 10000000
+        # except subprocess.CalledProcessError:
+        #     print (f"WARNING: Command failed: {' '.join(command)}")
+        #     print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to crash")
+        #     return 10000000
+
+        # except subprocess.TimeoutExpired:
+        #     proc.kill()
+        #     print (f"Ran {instance} with queue {config['queue_type']} and model {config_name}: not solved due to time limit")
+        #     return 10000000
+
+        # except:
+        #     print (f"Error: Command failed: {' '.join(command)}")
+
+        #     print("Output: ", output.decode())
+        #     if error_output:
+        #         print("Error Output: ", error_output.decode())
 
 
 def parse_config(config):
@@ -307,8 +316,8 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     target_folder = Categorical('target_folder', ['runs-lama', 'good-operators-unit'], default="good-operators-unit")
     layers_num = Categorical('layers_num', [3, 5, 7], default=3)
     hidden_size = Categorical('hidden_size', [64, 128, 256, 512], default=256)
-    conv_type = Categorical('conv_type', ['SAGEConv', 'GATConv'], default='SAGEConv')
-    aggr = Categorical('aggr', ['add', 'mean', 'max'], default='mean')
+    conv_type = Categorical('conv_type', ['SAGEConv'], default='SAGEConv')
+    aggr = Categorical('aggr', ['mean', 'max'], default='mean')
     optimizer = Categorical('optimizer', ['Adam', 'RMSprop'], default='Adam')
     lr = Categorical('lr', [0.001, 0.01, 0.005], default=0.001)
 
