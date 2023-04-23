@@ -18,7 +18,8 @@ AGGREGATIONS = {
     "sum",
     "var",
     "median",
-    "std"
+    "std",
+    "add",
 }
 
 OPTIMIZER_CLASSES = {
