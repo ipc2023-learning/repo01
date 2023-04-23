@@ -182,7 +182,7 @@ class PreprocessorSettings:
 
     def to_parameter_string(self):
         return (f"gnn-retries,{self.gnn_retries},"
-                f"gnn-threshold,{self.gnn_threshold}",
+                f"gnn-threshold,{self.gnn_threshold},"
                 f"model-path,{self.model_path}")
 
 @dataclass
