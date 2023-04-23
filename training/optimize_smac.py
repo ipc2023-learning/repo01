@@ -2,7 +2,7 @@ from ConfigSpace import Categorical, Float, Configuration, ConfigurationSpace, I
 from smac import HyperparameterOptimizationFacade, Scenario
 
 from lab.calls.call import Call
-from gnn_training import ModelSetting, run_step_gnn_learning
+from gnn_training import ModelSetting, PreprocessorSettings, run_step_gnn_learning
 
 import sys
 import os
@@ -51,16 +51,25 @@ class Eval:
 
     def target_function(self, config: Configuration, instance: str, seed: int) -> float:
         model_settings, target_folder = parse_config(config)
-            
+
+        DOMAIN = f'{self.DATA_DIR}/{self.domain_file}'
+        PROBLEM = f'{self.instances_dir}/{instance}'
+
         print(f"Running {instance} with {model_settings} and {target_folder}")
 
         model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}', self.DATA_DIR)
 
         if model_path is None:
             return 10000000
+        
+        preprocessor_settings = PreprocessorSettings(
+            model_path=model_path,
+            gnn_retries=3,
+            gnn_threshold=0.5
+        ).to_parameter_string()
 
-        command = f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{REPO_GNN_LEARNING}/src/preprocessor.command', DOMAIN, PROBLEM]
-        # command = [sys.executable, f'{self.GNN_LEARNING_DIR}/train.py']
+
+        command = [f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 

@@ -90,6 +90,8 @@ def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_di
     # Assert the file exisits
     model_path = f'{output_dir}/models/{model_settings.dir_name}/0.pt'
     assert os.path.exists(model_path), f"Model path {model_path} does not exist"
+    if not os.path.exists(model_path):
+        return None
     return model_path
 
 
@@ -171,6 +173,7 @@ def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_di
 class PreprocessorSettings:
     gnn_retries: int
     gnn_threshold: float
+    model_path: str
 
     def __post_init__(self):
         self.gnn_retries = int(self.gnn_retries)
@@ -178,7 +181,8 @@ class PreprocessorSettings:
 
     def to_parameter_string(self):
         return (f"gnn-retries,{self.gnn_retries},"
-                f"gnn-threshold,{self.gnn_threshold}")
+                f"gnn-threshold,{self.gnn_threshold}",
+                f"model-path,{self.model_path}")
 
 @dataclass
 class ModelSetting:
