@@ -80,13 +80,18 @@ def run_step_gnn_learning(REPO_LEARNING, model_settings, problems_dir, output_di
 
     Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 
-    latest_model = None if len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) == 0 else len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) - 1
+    # TODO: We currently have only one model, but in future we will have multiple models
+    # latest_model = None if len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) == 0 else len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) - 1
+    # new_model_path = f'{output_dir}/models/{model_settings.dir_name}/{latest_model}.pt'
+    # if latest_model is None:
+    #     return None
+    # return new_model_path
 
-    new_model_path = f'{output_dir}/models/{model_settings.dir_name}/{latest_model}.pt'
+    # Assert the file exisits
+    model_path = f'{output_dir}/models/{model_settings.dir_name}/0.pt'
+    assert os.path.exists(model_path), f"Model path {model_path} does not exist"
+    return model_path
 
-    if latest_model is None:
-        return None
-    return new_model_path
 
     # Make domain knowledge folder
     # DK_DIR = os.path.join(DATA_DIR, "DK")
