@@ -125,11 +125,11 @@ def parse_config(config):
         'lr': config_dict['lr'],
         'optimizer': config_dict['optimizer'],
     }
-    targetOperators = config_dict['target_folder']
+    target_operators = config_dict['target_folder']
 
     model_settings = ModelSetting.from_dict(modelSettingsDict)
 
-    return model_settings, targetOperators
+    return model_settings, target_operators
 
 # Note: default configuration should solve at least 50% of the instances. Pick instances
 # with LAMA accordingly. If we run SMAC multiple times, we can use different instances
@@ -179,8 +179,9 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
 
     # print("Chosen configuration: ", incumbent)
 
-    config = parse_config(incumbent)
-    print("Chosen configuration: ", config)
+    model_setting, target_operator = parse_config(incumbent)
+    
+    print("Chosen model settings: ", model_setting)
 
 
 
