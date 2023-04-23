@@ -78,8 +78,9 @@ def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_
 
     # return output, output_error
 
+    num_epoch = str(300)
 
-    Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
+    Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting, "--num-epoch", num_epoch], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 
     # TODO: We currently have only one model, but in future we will have multiple models
     # latest_model = None if len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) == 0 else len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) - 1
