@@ -120,20 +120,39 @@ def main():
     lama_operators_data = f'{TRAINING_DIR}/runs-lama'
     gnn_data_lama_ops = f'{GNN_DATA_DIR}/runs-lama'
     gnn_model_data_lama_ops = f'{GNN_LEARNING_DIR}/runs-lama'
-     
 
-    # x2 = f'{TRAINING_DIR}/lama'
-    # y2 = f'{GNN_DATA_DIR}/lama'
-    data_folders.append((good_operators_data, gnn_data_good_ops, "good_operators"))
-    data_folders.append((lama_operators_data, gnn_data_lama_ops, "sas_plan"))
+    mixed_operators_data = f'{TRAINING_DIR}/mixed'
+    gnn_data_mixed = f'{GNN_DATA_DIR}/mixed'
+    gnn_model_data_mixed =  f'{GNN_LEARNING_DIR}/mixed'
+
+    shutil.copytree(lama_operators_data, mixed_operators_data)
+
+
+    # TODO: Currently the strategy is to take the good_operators file as a priority and if missing we take the plan from lama
+    # This migght also need to support multiple plans concatanation
+    # First copy all LAMA plans to the mixed folder
+    # Then replace the plans with good_operators if LAMA and GOOD overlap
+    problems_in_both = set(os.listdir(good_operators_data)).intersection(set(os.listdir(lama_operators_data)))
+    for problem_dir in problems_in_both:
+        good_problem_dir = f'{good_operators_data}/{problem_dir}'
+        # double check we have good_operators
+        if os.path.exists(f'{good_problem_dir}/good_operators'):
+            shutil.copy(f'{good_problem_dir}/good_operators', f'{mixed_operators_data}/{problem_dir}')
+            print("Copied good operators from good_operators_unit")
+
+
+    data_folders.append((good_operators_data, gnn_data_good_ops))
+    data_folders.append((lama_operators_data, gnn_data_lama_ops))
+    data_folders.append((mixed_operators_data, gnn_data_mixed))
+
+
     # data_folders.append((x2, y2))
 
-    for problems_dir, output_dir, good_action_file_name in data_folders:
+    for problems_dir, output_dir in data_folders:
         run_step_generate_gnn_data(
             REPO_GNN_LEARNING=REPO_GNN_LEARNING,
             PROBLEMS_DIR=problems_dir,
             OUTPUT_DIR=output_dir,
-            good_actions_file_name=good_action_file_name,
         )
 
 
@@ -144,9 +163,8 @@ def main():
     
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
-  
 
-    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=10000, n_trials=100, n_workers=3)
+    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=10000, n_trials=100, n_workers=1)
 
     # Copy the best model to the DK folder
     model_path = shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')

@@ -143,10 +143,10 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     ### Create model parameters
     #############################
 
-    target_folder = Categorical('target_folder', ['runs-lama', 'good-operators-unit'], default="good-operators-unit")
-    layers_num = Categorical('layers_num', [3, 5, 7], default=3)
-    hidden_size = Categorical('hidden_size', [64, 128, 256, 512], default=256)
-    conv_type = Categorical('conv_type', ['SAGEConv'], default='SAGEConv')
+    target_folder = Categorical('target_folder', ['mixed', "runs-lama", "good-operators-unit"], default="good-operators-unit")
+    layers_num = Categorical('layers_num', [2,3], default=3)
+    hidden_size = Categorical('hidden_size', [4,8,16], default=8)
+    conv_type = Categorical('conv_type', ['SAGEConv', 'GATConv'], default='SAGEConv')
     aggr = Categorical('aggr', ['mean', 'max'], default='mean')
     optimizer = Categorical('optimizer', ['Adam', 'RMSprop'], default='Adam')
     lr = Categorical('lr', [0.001, 0.01, 0.005], default=0.001)
