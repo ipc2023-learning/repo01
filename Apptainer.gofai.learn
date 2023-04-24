@@ -4,31 +4,23 @@ From: ubuntu:kinetic
 Stage: build
 
 %files
-    .
+    fd-symbolic
+    scorpion
 
 %post
     apt-get update
-    apt-get -y install --no-install-recommends cmake make g++ python3 pypy3 automake pkg-config libgmp10 libgmp-dev libreadline-dev  libsqlite3-dev sqlite3
+    apt-get -y install --no-install-recommends cmake make g++ python3 automake 
 
+    rm -rf fd-symbolic/builds
+    cd fd-symbolic
+    python3 build.py
+    strip --strip-all builds/release/bin/preprocess builds/release/bin/downward
+    cd ..
 
-    # TODO: Fix compilation error in newer g++
-    # rm -rf fd-symbolic/builds
-    # cd fd-symbolic
-    # pypy3 build.py
-    # strip --strip-all builds/release64/bin/preprocess builds/release64/bin/downward
-    # cd ..
-
-
-    mkdir yap
-    cd learning/yap
-    mkdir build
-    cd build
-
-    cmake .. -DCMAKE_INSTALL_PREFIX=/yap
-    make
-    make install
-
-    # TODO Install lab
+    rm -rf scorpion/builds
+    cd scorpion
+    python3 build.py
+    cd ..
 
 
 # Stage 2: Run the planner
@@ -37,25 +29,30 @@ From: ubuntu:kinetic
 Stage: run
 
 # Copy planner binary and required files from Stage 1.
+%files
+    requirements-learn.txt
+
+    learn.py /learn.py
+    training /training
+
+
 %files from build
+    /fd-symbolic/builds/release/bin
+    /fd-symbolic/fast-downward.py
+    /fd-symbolic/driver
 
-    learn.py
-    training
+    /scorpion/builds/release/bin
+    /scorpion/fast-downward.py
+    /scorpion/driver
 
-    fd-symbolic/builds/release64/bin/
-    fd-symbolic/fast-downward.py
-    fd-symbolic/driver
-
-    learning/learning-aleph
-    learning/learning-sklearn
-    learning/aleph/aleph.pl
-    learning/translate
 
 %post
     apt-get update
-   # apt-get -y install --no-install-recommends default-jre-headless pypy python ruby
+    apt-get -y install --no-install-recommends python3 python3-pip
     apt-get clean
     rm -rf /var/lib/apt/lists/*
+
+    pip install -r requirements-learn.txt
 
 %runscript
     #! /bin/bash
@@ -66,16 +63,12 @@ Stage: run
     shift 2  # Forget first two arguments.
     PROBLEM_FILES=("$@")  # All remaining arguments are problem files.
 
-    export PYTHONPATH=/lab
-
-    /preprocess-tasks.py "$DOMAIN_FILE" "${PROBLEM_FILES[@]}"
-    /tuning/tuning_exp.py --tuner-timeout 10 --repo /cedalion/ --track sat --response quality --trainingset instances.txt --parameters /parameters/fd-sat.txt --numruns 1 --path tuning-exp 1 2 3 4 5
-    mv tuning-exp-eval/configs.py "$DOMAIN_KNOWLEDGE_FILE"
+    python3 /learn.py "$DOMAIN_FILE" "${PROBLEM_FILES[@]}" --cpus 1 --total_time_limit 259200 --total_memory_limit 90000
 
 %labels
-Name        Fast Downward SMAC 2014
-Description Single Fast Downward configuration, optimized with SMAC for the given training tasks.
-Authors     Jendrik Seipp <jendrik.seipp@liu.se>, Silvan Sievers <silvan.sievers@unibas.ch, Frank Hutter <fh@informatik.uni-freiburg.de>
+Name        HUZAR
+Description Learning part of the HUZAR submission
+Authors     Piotr Rafal Gzubicki <pgzubi21@student.aau.dk> Bartosz Piotr Lachowicz <blacho21@student.aau.dk>
 License     GPL 3
 Tracks      single-core
 SupportsDerivedPredicates                       yes
