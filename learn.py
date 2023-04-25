@@ -164,7 +164,7 @@ def main():
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
-    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=10000, n_trials=100, n_workers=1)
+    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=200, n_trials=100, n_workers=1)
 
     # Copy the best model to the DK folder
     model_path = shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')
