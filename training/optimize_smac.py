@@ -45,7 +45,7 @@ class Eval:
         self.domain_file = domain_file
 
         self.regex_total_time = re.compile(rb"INFO\s+Planner time:\s(.+)s", re.MULTILINE)
-        self.regex_operators = re.compile(rb"Translator operators:\s(.+)", re.MULTILINE)
+        self.regex_operators = re.compile(rb"Preprocessor operators:\s(.+)", re.MULTILINE)
         self.regex_plan_cost = re.compile(rb"\[t=.*s, .* KB\] Plan cost:\s(.+)\n", re.MULTILINE)
         self.regex_no_solution = re.compile(rb"\[t=.*KB\] Completely explored state space.*no solution.*", re.MULTILINE)
 
@@ -68,7 +68,7 @@ class Eval:
             gnn_threshold=0.5
         ).to_parameter_string()
 
-        command = [sys.executable, f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_setting, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM]
+        command = [sys.executable, f'{self.SCORPION_PATH}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', preprocessor_setting, '--transform-task', f'{self.GNN_REPO_DIR}/src/preprocessor.command', DOMAIN, PROBLEM]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
@@ -76,7 +76,7 @@ class Eval:
             output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
 
             total_time = self.regex_total_time.search(output)
-            num_operators = self.regex_operators.search(output)
+            num_operators = self.regex_operators.search(output) # TODO: take last value and check if num operators not null
             plan_cost = self.regex_plan_cost.search(output)
 
             if total_time and num_operators and plan_cost:

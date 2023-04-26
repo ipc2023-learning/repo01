@@ -7,6 +7,7 @@ import os
 import os.path
 import shutil
 import sys
+import tarfile
 
 from lab.calls.call import Call
 from lab.environments import  LocalEnvironment
@@ -167,19 +168,25 @@ def main():
     path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=200, n_trials=100, n_workers=1)
 
     # Copy the best model to the DK folder
-    model_path = shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')
+    shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')
 
     # TODO: Save model settings as string in the DK folder
     with open(os.path.join(DK_DIR, "model_settings.txt"), "w") as f:
         f.write(model_setting.to_parameter_string_comma())
         
     # TODO: Save the preprocessor settings as string to the DK folder
-    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path=model_path)
+    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path="extracted/DK/model.pt")
     with open(os.path.join(DK_DIR, "preprocessor_settings.txt"), "w") as f:
         f.write(preprocessor_settings.to_parameter_string())
 
-    # DK_DIR into zip file
-    shutil.make_archive(DK_DIR, 'zip', DK_DIR)
+    # save the DK_DIR to tar file 
+    def make_tarfile(source_dir, output_filename):
+        with tarfile.open(output_filename, "w:gz") as tar:
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
+
+    make_tarfile(DK_DIR, f'DK.tar.gz')
+
+    
 
 if __name__ == "__main__":
     main()

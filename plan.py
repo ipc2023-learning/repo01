@@ -7,6 +7,7 @@ import os.path
 import subprocess
 import sys
 import shutil
+import tarfile
 
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -32,13 +33,27 @@ def main():
     DOMAIN = args.domain
     PROBLEM = args.problem
     PLAN_OUT = args.plan
-    
-    DK_DIR = f'{ROOT}/DK'
 
-    shutil.unpack_archive(DK_DIR_FILE, DK_DIR ,'zip')
+    dk_folder = f"extracted"
+
+    # uncompress domain knowledge file
+    with tarfile.open(args.domain_knowledge, "r:gz") as tar:
+        if os.path.exists(dk_folder):
+            shutil.rmtree(dk_folder)
+        tar.extractall(dk_folder)
+
+
     
-    model_path = os.path.join(DK_DIR, "model.pt")
-    preprocessor_settings = os.path.join(DK_DIR, "preprocessor_settings.txt")
+    # DK_DIR = f'{ROOT}/DK'
+
+    # if os.path.exists(DK_DIR):
+    #     shutil.rmtree(DK_DIR)
+    # os.mkdir(DK_DIR)
+
+    # shutil.unpack_archive(DK_DIR_FILE, DK_DIR ,'zip')
+    
+    model_path = os.path.join(dk_folder, "model.pt")
+    preprocessor_settings = os.path.join(dk_folder, "DK", "preprocessor_settings.txt")
 
     # Read preprocessor settings as string
     with open(preprocessor_settings, "r") as f:
