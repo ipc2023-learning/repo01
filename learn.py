@@ -25,7 +25,7 @@ if debug:
         save_model,
     )
     from training.instance_set import InstanceSet, select_instances_from_runs
-    from training.optimize_smac import run_smac
+    from training.optimize_smac import run_smac, compare_models
 
 else:
     from gnn_training import run_step_gnn_learning, ModelSetting, PreprocessorSettings
@@ -35,7 +35,7 @@ else:
         save_model,
     )
     from instance_set import InstanceSet, select_instances_from_runs
-    from optimize_smac import run_smac
+    from optimize_smac import run_smac, compare_models
 
 
 
@@ -161,31 +161,50 @@ def main():
     if os.path.exists(DK_DIR):
         shutil.rmtree(DK_DIR)
     os.mkdir(DK_DIR)
-    
+
+    TEMP_DIR = os.path.join(TRAINING_DIR, "temp")
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
-    path_to_best_model, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac1', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=200, n_trials=100, n_workers=1)
-
-    # Copy the best model to the DK folder
-    shutil.copy(path_to_best_model, f'{DK_DIR}/model.pt')
-
-    # TODO: Save model settings as string in the DK folder
-    with open(os.path.join(DK_DIR, "model_settings.txt"), "w") as f:
-        f.write(model_setting.to_parameter_string_comma())
+    for i in range(5):
+        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
         
-    # TODO: Save the preprocessor settings as string to the DK folder
-    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path="extracted/DK/model.pt")
-    with open(os.path.join(DK_DIR, "preprocessor_settings.txt"), "w") as f:
-        f.write(preprocessor_settings.to_parameter_string())
+        if i == 0:
+            # Copy the best model to the DK folder
+            save_model(model_path, DK_DIR, model_setting)
+        else:
+            if os.path.exists(TEMP_DIR):
+                shutil.rmtree(TEMP_DIR)
+            os.mkdir(TEMP_DIR)
 
-    # save the DK_DIR to tar file 
-    def make_tarfile(source_dir, output_filename):
-        with tarfile.open(output_filename, "w:gz") as tar:
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
+            save_model(model_path, TEMP_DIR, model_setting)
+
+            is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, SMAC_INSTANCES)
+            print(f"Is candidate better: {is_candidate_better}")
+            input("Press Enter to continue...")
+            if is_candidate_better:
+                shutil.rmtree(DK_DIR)
+                shutil.copytree(TEMP_DIR, DK_DIR)
+
 
     make_tarfile(DK_DIR, f'DK.tar.gz')
 
+def save_model(source_model, target_dir, model_setting):
+
+    shutil.copy(source_model, f'{target_dir}/model.pt')
+
+    # TODO: Save model settings as string in the DK folder
+    with open(os.path.join(target_dir, "model_settings.txt"), "w") as f:
+        f.write(model_setting.to_parameter_string_comma())
+        
+    # TODO: Save the preprocessor settings as string to the DK folder
+    preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path=f'{target_dir}/model.pt')
+    with open(os.path.join(target_dir, "preprocessor_settings.txt"), "w") as f:
+        f.write(preprocessor_settings.to_parameter_string())
+
+def make_tarfile(source_dir, output_filename):
+        with tarfile.open(output_filename, "w:gz") as tar:
+            tar.add(source_dir, arcname=os.path.basename(source_dir))
     
 
 if __name__ == "__main__":

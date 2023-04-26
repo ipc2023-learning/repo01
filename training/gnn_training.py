@@ -181,6 +181,14 @@ class PreprocessorSettings:
         self.gnn_retries = int(self.gnn_retries)
         self.gnn_threshold = float(self.gnn_threshold)
 
+    @classmethod
+    def from_file(cls, file_path) -> "PreprocessorSettings":
+        with open(file_path) as f:
+            lines = f.read()
+            _, gnn_retries, _, gnn_threshold, _, model_path = lines.split(",")
+            
+        return cls(gnn_retries, gnn_threshold, model_path)
+
     def to_parameter_string(self):
         return (f"gnn-retries,{self.gnn_retries},"
                 f"gnn-threshold,{self.gnn_threshold},"
@@ -207,6 +215,15 @@ class ModelSetting:
 
     def from_dict(settings_dict) -> "ModelSetting":
         return ModelSetting(**settings_dict)
+    
+    @classmethod
+    def from_file(cls, path: str):
+        with open(os.path.join(path)) as f:
+            lines = f.read()
+            layers_num, hidden_size, conv_type, aggr, optimizer, lr = lines.split(',')
+        
+        return cls(layers_num=layers_num, hidden_size=hidden_size, conv_type=conv_type,
+                    aggr=aggr, optimizer=optimizer, lr=lr)
 
     @property
     def dir_name(self):

@@ -6,21 +6,17 @@ from gnn_training import ModelSetting, PreprocessorSettings, run_step_gnn_learni
 
 import sys
 import os
-import json
 import subprocess
 import re
 import shutil
-
-from collections import defaultdict
 
 
 # from functools import partial
 
 # Hardcoded paths that depend on the trraining part. This could be passed by parameter instead
-PARTIAL_GROUNDING_RULES_DIR = 'partial-grounding-rules'
-PARTIAL_GROUNDING_ALEPH_DIR  = 'partial-grounding-aleph'
-SUFFIX_ALEPH_MODELS = '.rules'
-PREFIX_SK_MODELS = 'model_'
+GNN_REPO_DIR = 'gnn-learning'
+SCORPION_DIR = 'scorpion'
+
 
 # Hardcoded paths
 INTERMEDIATE_SMAC_MODELS = 'intermediate-smac-models'
@@ -134,10 +130,11 @@ def parse_config(config):
 # Note: default configuration should solve at least 50% of the instances. Pick instances
 # with LAMA accordingly. If we run SMAC multiple times, we can use different instances
 # set, as well as changing the default configuration each time.
-def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers):
+def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers, run_id):
     GNN_LEARNING_DIR = os.path.join(DATA_DIR, 'gnn-learning')
     DATA_DIR = os.path.abspath(DATA_DIR) # Make sure path is absolute so that symlinks work
-    os.mkdir(WORKING_DIR)
+    working_dir = f'{WORKING_DIR}'+f'-run-{run_id}'
+    os.mkdir(working_dir)
 
     ############################
     ### Create model parameters
@@ -160,14 +157,14 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     cs.add_hyperparameters(parameters)
     # cs.add_conditions(conditions)
 
-    evaluator = Eval (ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir)
+    evaluator = Eval (ROOT, DATA_DIR, working_dir, domain_file, instance_dir)
 
 
     print ([ins for ins in instances_with_features])
     print(instances_with_features)
     scenario = Scenario(
         configspace=cs, deterministic=True,
-        output_directory=os.path.join(WORKING_DIR, 'smac'),
+        output_directory=os.path.join(working_dir, 'smac'),
         walltime_limit=walltime_limit,
         n_trials=n_trials,
         n_workers=n_workers,
@@ -175,7 +172,7 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
         instance_features=instances_with_features
     )
     # Use SMAC to find the best configuration/hyperparameters
-    smac = HyperparameterOptimizationFacade(scenario, evaluator.target_function)
+    smac = HyperparameterOptimizationFacade(scenario, evaluator.target_function, overwrite=False)
     incumbent = smac.optimize()
 
 
@@ -187,11 +184,41 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
 
     return path_to_best_model, model_setting
 
-    # if 'trained' in  incumbent['queue_type']:
-    #     candidate_models.copy_model_to_folder(incumbent, os.path.join(WORKING_DIR, 'incumbent'), symlink=False )
-    # else:
-    #     os.mkdir(os.path.join(WORKING_DIR, 'incumbent'))
+def compare_models(path_to_best, path_to_candidate, domain_path, instances) -> bool:
+    # TODO: setup the regexes to catch results
+    preprocessr_settings_file = os.path.join(path_to_best, 'preprocessor_settings.txt')
+    with open(preprocessr_settings_file, 'r') as f:
+        best_preprocess_settings = f.read()
 
-    # with open(os.path.join(WORKING_DIR, 'incumbent', 'config'), 'w') as config_file:
-    #     json.dump(incumbent.get_dictionary(), config_file)
-        #config_file.write(f"--alias {incumbent['alias']} --grounding-queue {incumbent['queue_type']}")
+    preprocessr_settings_file = os.path.join(path_to_candidate, 'preprocessor_settings.txt')
+    with open(preprocessr_settings_file, 'r') as f:
+        candidate_preprocess_settings = f.read()
+
+    # List which holds results of the comparison. 1 for best model, 0 for candidate model, -1 for tie
+    comaprison_results = []
+
+    for problem in instances:
+        best_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', best_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, problem]
+        best_proc = subprocess.Popen(best_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+        candidate_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', candidate_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, problem]
+        candidate_proc = subprocess.Popen(candidate_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        best_output, best_error_output = best_proc.communicate()
+        candidate_output, candidate_error_output = candidate_proc.communicate()
+        
+        # TODO: Extract from output using regexes
+        best_operators = 10
+        candidate_operators = 5
+
+        if best_operators < candidate_operators:
+            comaprison_results.append(1)
+        elif best_operators > candidate_operators:
+            comaprison_results.append(0)
+        else:
+            comaprison_results.append(-1)
+
+    if comaprison_results.count(1) >= comaprison_results.count(0):
+        return False
+    else:
+        return True
