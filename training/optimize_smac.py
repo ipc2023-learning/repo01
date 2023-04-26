@@ -41,7 +41,7 @@ class Eval:
         self.domain_file = domain_file
 
         self.regex_total_time = re.compile(rb"INFO\s+Planner time:\s(.+)s", re.MULTILINE)
-        self.regex_operators = re.compile(r"[\d]+ of [\d]+ operators necessary")
+        self.regex_operators = re.compile(r"([\d]+) of [\d]+ operators necessary")
         self.regex_plan_cost = re.compile(rb"\[t=.*s, .* KB\] Plan cost:\s(.+)\n", re.MULTILINE)
         self.regex_no_solution = re.compile(rb"\[t=.*KB\] Completely explored state space.*no solution.*", re.MULTILINE)
 
@@ -70,16 +70,15 @@ class Eval:
 
         try:
             output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
+            read_output = output.decode()
 
             total_time = self.regex_total_time.search(output)
-            all_matches_num_operators = self.regex_operators.findall(output)
-            if all_matches_num_operators is not None:
-                num_operators = all_matches_num_operators[-1]
+            all_matches_num_operators = self.regex_operators.findall(read_output)
             plan_cost = self.regex_plan_cost.search(output)
 
-            if total_time and num_operators and plan_cost:
+            if total_time and all_matches_num_operators and plan_cost:
                 total_time = float(total_time.group(1))
-                num_operators = float(num_operators.group(1))
+                num_operators = float(all_matches_num_operators[-1])
                 plan_cost = float(plan_cost.group(1))
                 print (f"Ran {instance} with model settings {model_settings}: time {total_time}, operators {num_operators}, cost {plan_cost}")
                 return num_operators
