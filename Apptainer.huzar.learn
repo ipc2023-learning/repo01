@@ -4,11 +4,18 @@ From: ubuntu:kinetic
 Stage: build
 
 %files
+    fd-symbolic
     scorpion
 
 %post
     apt-get update
-    apt-get -y install --no-install-recommends cmake make g++ python3
+    apt-get -y install --no-install-recommends cmake make g++ python3 automake 
+
+    rm -rf fd-symbolic/builds
+    cd fd-symbolic
+    python3 build.py
+    strip --strip-all builds/release64/bin/preprocess builds/release64/bin/downward
+    cd ..
 
     rm -rf scorpion/builds
     cd scorpion
@@ -23,14 +30,22 @@ Stage: run
 
 # Copy planner binary and required files from Stage 1.
 %files
-    requirements-plan.txt
+    requirements-learn.txt
 
-    plan.py /plan.py
+    learn.py /learn.py
+    training /training
+    gnn-learning /gnn-learning
+
 
 %files from build
-    /scorpion/builds/release/bin/
+    /fd-symbolic/builds/release64/bin
+    /fd-symbolic/fast-downward.py
+    /fd-symbolic/driver
+
+    /scorpion/builds/release/bin
     /scorpion/fast-downward.py
     /scorpion/driver
+
 
 %post
     apt-get update
@@ -38,18 +53,17 @@ Stage: run
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 
-    pip install -r requirements-plan.txt
+    pip install -r requirements-learn.txt
 
 %runscript
     #! /bin/bash
     set -euo pipefail
 
-    DOMAIN_KNOWLEDGE_FILE="$1"
-    DOMAIN_FILE="$2"
-    PROBLEM_FILE="$3"
-    PLAN_FILE="$4"
+    DOMAIN_FILE="$1"
+    shift 2  # Forget first two arguments.
+    PROBLEM_FILES=("$@")  # All remaining arguments are problem files.
 
-    python3 /plan.py "$DOMAIN_KNOWLEDGE_FILE" "$DOMAIN_FILE" "$PROBLEM_FILE" "$PLAN_FILE"
+    python3 /learn.py "$DOMAIN_FILE" "${PROBLEM_FILES[@]}" --cpus 1 --total_time_limit 259200 --total_memory_limit 90000
 
 %labels
 Name        HUZAR

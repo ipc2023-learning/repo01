@@ -72,16 +72,19 @@ class InstanceSet:
     def select_instances (self, conditions):
         result = []
         for ins, p in self.instances_with_properties.items():
-            # try:
+            try:
                 if all([c(ins, p) for c in conditions]):
                    result.append(ins)
-            # except:
-            #         pass
+            except:
+                pass
 
         return result
 
     def add_training_data(self, runs_training_data):
         self.training_data_run_dirs.append(runs_training_data)
+
+    def get_training_datasets(self):
+        return self.training_data_run_dirs
 
 
         ######
@@ -134,10 +137,19 @@ class InstanceSet:
 
 
     def get_smac_instances(self, properties):
+
+        selected_instances = []
+        for ins in self.SMAC_INSTANCES:
+            selected_instances.append(ins)
+
+
+        max_value = {}
+        for p in properties:
+            max_value [p] = max([self.instances_with_properties[ins][p] for ins in self.SMAC_INSTANCES if p in self.instances_with_properties[ins]])
+
         selected_smac_instances = {}
         for ins in self.SMAC_INSTANCES:
-
-            selected_smac_instances [ins] = {p : self.instances_with_properties[ins][p] for p in properties if p in self.instances_with_properties[ins]}
+            selected_smac_instances [ins] = [self.instances_with_properties[ins][p] if p in self.instances_with_properties[ins] else max_value[p]*10 for p in properties]
 
         return selected_smac_instances
 
