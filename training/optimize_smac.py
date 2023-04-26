@@ -41,7 +41,7 @@ class Eval:
         self.domain_file = domain_file
 
         self.regex_total_time = re.compile(rb"INFO\s+Planner time:\s(.+)s", re.MULTILINE)
-        self.regex_operators = re.compile(rb"Preprocessor operators:\s(.+)", re.MULTILINE)
+        self.regex_operators = re.compile(r"[\d]+ of [\d]+ operators necessary")
         self.regex_plan_cost = re.compile(rb"\[t=.*s, .* KB\] Plan cost:\s(.+)\n", re.MULTILINE)
         self.regex_no_solution = re.compile(rb"\[t=.*KB\] Completely explored state space.*no solution.*", re.MULTILINE)
 
@@ -72,7 +72,9 @@ class Eval:
             output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
 
             total_time = self.regex_total_time.search(output)
-            num_operators = self.regex_operators.search(output) # TODO: take last value and check if num operators not null
+            all_matches_num_operators = self.regex_operators.findall(output)
+            if all_matches_num_operators is not None:
+                num_operators = all_matches_num_operators[-1]
             plan_cost = self.regex_plan_cost.search(output)
 
             if total_time and num_operators and plan_cost:
