@@ -17,7 +17,7 @@ debug=False
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
 if debug:
-    from training.gnn_training import run_step_gnn_learning
+    from training.gnn_training import run_step_gnn_learning, PreprocessorSettings, ModelSetting
     from training.generate_gnn_data import run_step_generate_gnn_data
     from training.run_experiment import RunExperiment
     from training.utils import (
@@ -166,7 +166,7 @@ def main():
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
-    for i in range(5):
+    for i in range(2):
         model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
         
         if i == 0:
@@ -181,9 +181,19 @@ def main():
 
             is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, SMAC_INSTANCES)
             print(f"Is candidate better: {is_candidate_better}")
-            input("Press Enter to continue...")
+            # input("Press Enter to continue...")
             if is_candidate_better:
+                preprocessor_settings = PreprocessorSettings.from_file(f'{TEMP_DIR}/preprocessor_settings.txt')
+                preprocessor_settings.model_path = f'{DK_DIR}/model.pt'
+                preprocessor_settings_txt = preprocessor_settings.to_parameter_string()
+                # remove preprocessor_settings.txt from TEMP_DIR
+                os.remove(f'{TEMP_DIR}/preprocessor_settings.txt')
+                # save preprocessor_settings_txt to TEMP_DIR
+                with open(f'{TEMP_DIR}/preprocessor_settings.txt', 'w') as f:
+                    f.write(preprocessor_settings_txt)
+                # remove DK_DIR
                 shutil.rmtree(DK_DIR)
+                # copy TEMP_DIR to DK_DIR
                 shutil.copytree(TEMP_DIR, DK_DIR)
 
 
@@ -203,6 +213,17 @@ def save_model(source_model, target_dir, model_setting):
         f.write(preprocessor_settings.to_parameter_string())
 
 def make_tarfile(source_dir, output_filename):
+        #Update preprocess settings
+        preprocessor_settings = PreprocessorSettings.from_file(f'{source_dir}/preprocessor_settings.txt')
+        model_folder = source_dir.split('/')[-1]
+        preprocessor_settings.model_path = f'extracted/{model_folder}/model.pt'
+        preprocessor_settings_txt = preprocessor_settings.to_parameter_string()
+        # remove preprocessor_settings.txt from source_dir
+        os.remove(f'{source_dir}/preprocessor_settings.txt')
+        # save preprocessor_settings_txt to source_dir
+        with open(f'{source_dir}/preprocessor_settings.txt', 'w') as f:
+            f.write(preprocessor_settings_txt)
+        
         with tarfile.open(output_filename, "w:gz") as tar:
             tar.add(source_dir, arcname=os.path.basename(source_dir))
     
