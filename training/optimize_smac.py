@@ -185,8 +185,12 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
 
     return path_to_best_model, model_setting
 
-def compare_models(path_to_best, path_to_candidate, domain_path, instances) -> bool:
-    # TODO: setup the regexes to catch results
+def compare_models(path_to_best, path_to_candidate, domain_path, instances_dir, instances) -> bool:
+
+
+
+    regex_operators = re.compile(r"([\d]+) of [\d]+ operators necessary")
+
     preprocessr_settings_file = os.path.join(path_to_best, 'preprocessor_settings.txt')
     with open(preprocessr_settings_file, 'r') as f:
         best_preprocess_settings = f.read()
@@ -199,18 +203,43 @@ def compare_models(path_to_best, path_to_candidate, domain_path, instances) -> b
     comaprison_results = []
 
     for problem in instances:
-        best_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', best_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, problem]
+        PROBLEM = f'{instances_dir}/{problem}.pddl'
+
+        print("best preprocess settings: ", best_preprocess_settings)
+        print("candidate preprocess settings: ", candidate_preprocess_settings)
+        input("Press Enter to continue...")
+
+        best_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', best_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
         best_proc = subprocess.Popen(best_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
-        candidate_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', candidate_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, problem]
+        candidate_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', candidate_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
         candidate_proc = subprocess.Popen(candidate_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        best_output, best_error_output = best_proc.communicate()
+        # best_output, best_error_output = best_proc.communicate()
         candidate_output, candidate_error_output = candidate_proc.communicate()
-        
-        # TODO: Extract from output using regexes
-        best_operators = 10
-        candidate_operators = 5
+
+        print("candidate_output: ", candidate_output)
+        print("candidate_error_output: ", candidate_error_output)
+        input("Press Enter to continue... output")
+   
+        # best_output = best_output.decode()
+        candidate_output = candidate_output.decode()
+        print("candidate_output: ", candidate_output)
+        input("Press Enter to continue... decode")
+
+        # best_operators = regex_operators.findall(best_output)
+        candidate_operators = regex_operators.findall(candidate_output)
+
+        # print(f"Best operators: {best_operators}")
+        print(f"Candidate operators: {candidate_operators}")
+        3/0
+
+        best_operators = float(regex_operators.findall(best_output)[-1])
+        candidate_operators = float(regex_operators.findall(candidate_output)[-1])
+            
+        print(f"Best operators: {best_operators}")
+        print(f"Candidate operators: {candidate_operators}")
+        input("Press Enter to continue...")
 
         if best_operators < candidate_operators:
             comaprison_results.append(1)

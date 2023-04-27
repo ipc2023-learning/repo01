@@ -47,7 +47,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
-    parser.add_argument("--path", default='./data', help="path to store results")
+    parser.add_argument("--path", default='data', help="path to store results")
     parser.add_argument("--cpus", type=int, default=1, help="number of cpus available")
     parser.add_argument("--total_time_limit", default=30, type=int, help="time limit")
     parser.add_argument("--total_memory_limit", default=7*1024, help="memory limit")
@@ -162,13 +162,13 @@ def main():
         shutil.rmtree(DK_DIR)
     os.mkdir(DK_DIR)
 
-    TEMP_DIR = os.path.join(TRAINING_DIR, "temp")
+    TEMP_DIR = os.path.join(TRAINING_DIR, "intermediate")
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
     for i in range(2):
         model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
-        
+
         if i == 0:
             # Copy the best model to the DK folder
             save_model(model_path, DK_DIR, model_setting)
@@ -179,9 +179,10 @@ def main():
 
             save_model(model_path, TEMP_DIR, model_setting)
 
-            is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, SMAC_INSTANCES)
+            is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, BENCHMARKS_DIR, SMAC_INSTANCES)
             print(f"Is candidate better: {is_candidate_better}")
             # input("Press Enter to continue...")
+
             if is_candidate_better:
                 preprocessor_settings = PreprocessorSettings.from_file(f'{TEMP_DIR}/preprocessor_settings.txt')
                 preprocessor_settings.model_path = f'{DK_DIR}/model.pt'
@@ -203,11 +204,9 @@ def save_model(source_model, target_dir, model_setting):
 
     shutil.copy(source_model, f'{target_dir}/model.pt')
 
-    # TODO: Save model settings as string in the DK folder
     with open(os.path.join(target_dir, "model_settings.txt"), "w") as f:
         f.write(model_setting.to_parameter_string_comma())
-        
-    # TODO: Save the preprocessor settings as string to the DK folder
+
     preprocessor_settings = PreprocessorSettings(gnn_retries=3, gnn_threshold=0.5, model_path=f'{target_dir}/model.pt')
     with open(os.path.join(target_dir, "preprocessor_settings.txt"), "w") as f:
         f.write(preprocessor_settings.to_parameter_string())
