@@ -1,5 +1,5 @@
 from ConfigSpace import Categorical, Float, Configuration, ConfigurationSpace, InCondition
-from smac import HyperparameterOptimizationFacade, Scenario
+from smac import AlgorithmConfigurationFacade, Scenario
 
 from lab.calls.call import Call
 from gnn_training import ModelSetting, PreprocessorSettings, run_step_gnn_learning
@@ -173,7 +173,7 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
         instance_features=instances_with_features
     )
     # Use SMAC to find the best configuration/hyperparameters
-    smac = HyperparameterOptimizationFacade(scenario, evaluator.target_function, overwrite=False)
+    smac = AlgorithmConfigurationFacade(scenario, evaluator.target_function, overwrite=False)
     incumbent = smac.optimize()
 
 
