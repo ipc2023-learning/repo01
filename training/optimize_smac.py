@@ -210,7 +210,7 @@ def compare_models(path_to_best, path_to_candidate, domain_path, instances_dir, 
         input("Press Enter to continue...")
 
         best_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', best_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
-        best_proc = subprocess.Popen(best_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # best_proc = subprocess.Popen(best_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
         candidate_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', candidate_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
         candidate_proc = subprocess.Popen(candidate_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
