@@ -53,7 +53,8 @@ class Eval:
 
         print(f"Running {instance} with {model_settings} and {target_folder}")
 
-        model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}')
+        # TODO: setup limits
+        model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}', time_limit=300, memory_limit=4*1024*1024)
 
         if model_path is None:
             return 10000000

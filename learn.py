@@ -42,6 +42,23 @@ else:
 
 from downward import suites
 
+# All time limits are in seconds
+TIME_LIMITS_IPC_SINGLE_CORE = {
+    'run_experiment' : 10*60, # 10 minutes
+    'train-hard-rules' : 60*60, # 1 hour, time per schema, TODO
+    'smac-optimization-hard-rules' : 60*60, # 1 hour
+    'smac-partial-grounding-total' : 60*60, # 1 hour
+    'smac-partial-grounding-run' : 120,
+}
+
+TIME_LIMITS_SEC = TIME_LIMITS_IPC_SINGLE_CORE
+
+# Memory limits are in MB
+MEMORY_LIMITS_MB = {
+    'run_experiment' : 1024*4,
+    'train-hard-rules' : 1024*4
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -90,8 +107,8 @@ def main():
     ENV = LocalEnvironment(processes=args.cpus)
     SUITE_ALL = suites.build_suite(TRAINING_DIR, ['instances'])
 
-    # Overall time limit is 10s and 1G # TODO: Set suitable time and memory limit
-    RUN = RunExperiment (10, 1000)
+    
+    RUN = RunExperiment (TIME_LIMITS_SEC ['run_experiment'], MEMORY_LIMITS_MB['run_experiment'])
 
     RUN.run_planner(f'{TRAINING_DIR}/runs-lama', REPO_GOOD_OPERATORS, [], ENV, SUITE_ALL, driver_options = ["--alias", "lama-first"])
 
@@ -154,6 +171,8 @@ def main():
             REPO_GNN_LEARNING=REPO_GNN_LEARNING,
             PROBLEMS_DIR=problems_dir,
             OUTPUT_DIR=output_dir,
+            time_limit=300, # TODO: what should it be 
+            memory_limit=4*1024*1024 # TODO: what should it be
         )
 
 
@@ -167,7 +186,7 @@ def main():
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
     for i in range(3):
-        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
+        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=TIME_LIMITS_SEC['smac-partial-grounding-total'], n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
             # Copy the best model to the DK folder
