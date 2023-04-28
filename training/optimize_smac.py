@@ -176,7 +176,6 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     smac = AlgorithmConfigurationFacade(scenario, evaluator.target_function, overwrite=False)
     incumbent = smac.optimize()
 
-
     model_setting, target_folder = parse_config(incumbent)
 
     path_to_best_model = os.path.join(GNN_LEARNING_DIR, target_folder, 'models', model_setting.dir_name, '0.pt')
@@ -185,57 +184,36 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
 
     return path_to_best_model, model_setting
 
-def compare_models(path_to_best, path_to_candidate, domain_path, instances_dir, instances) -> bool:
 
-
-
+def check_model_score_on_problem(path_to_model_dir, domain_path, PROBLEM):
     regex_operators = re.compile(r"([\d]+) of [\d]+ operators necessary")
 
-    preprocessr_settings_file = os.path.join(path_to_best, 'preprocessor_settings.txt')
+    preprocessr_settings_file = os.path.join(path_to_model_dir, 'preprocessor_settings.txt')
     with open(preprocessr_settings_file, 'r') as f:
-        best_preprocess_settings = f.read()
+        preprocess_settings = f.read()
 
-    preprocessr_settings_file = os.path.join(path_to_candidate, 'preprocessor_settings.txt')
-    with open(preprocessr_settings_file, 'r') as f:
-        candidate_preprocess_settings = f.read()
+    command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error_output = proc.communicate()
 
-    # List which holds results of the comparison. 1 for best model, 0 for candidate model, -1 for tie
+    output = output.decode()
+
+    operators = regex_operators.findall(output)
+    print(operators)
+    input("Press Enter to continue...")
+
+    result = float(operators[-1])
+    return result
+
+
+def compare_models(path_to_best, path_to_candidate, domain_path, instances_dir, instances) -> bool:
     comaprison_results = []
 
     for problem in instances:
         PROBLEM = f'{instances_dir}/{problem}.pddl'
 
-        print("best preprocess settings: ", best_preprocess_settings)
-        print("candidate preprocess settings: ", candidate_preprocess_settings)
-        input("Press Enter to continue...")
-
-        best_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', best_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
-        # best_proc = subprocess.Popen(best_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-        candidate_command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', '--alias', 'lama-first', '--transform-task-options', candidate_preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
-        candidate_proc = subprocess.Popen(candidate_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        # best_output, best_error_output = best_proc.communicate()
-        candidate_output, candidate_error_output = candidate_proc.communicate()
-
-        print("candidate_output: ", candidate_output)
-        print("candidate_error_output: ", candidate_error_output)
-        input("Press Enter to continue... output")
-   
-        # best_output = best_output.decode()
-        candidate_output = candidate_output.decode()
-        print("candidate_output: ", candidate_output)
-        input("Press Enter to continue... decode")
-
-        # best_operators = regex_operators.findall(best_output)
-        candidate_operators = regex_operators.findall(candidate_output)
-
-        # print(f"Best operators: {best_operators}")
-        print(f"Candidate operators: {candidate_operators}")
-        3/0
-
-        best_operators = float(regex_operators.findall(best_output)[-1])
-        candidate_operators = float(regex_operators.findall(candidate_output)[-1])
+        best_operators = check_model_score_on_problem(path_to_best, domain_path, PROBLEM)
+        candidate_operators = check_model_score_on_problem(path_to_candidate, domain_path, PROBLEM)
             
         print(f"Best operators: {best_operators}")
         print(f"Candidate operators: {candidate_operators}")
