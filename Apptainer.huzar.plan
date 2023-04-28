@@ -56,7 +56,7 @@ Stage: run
 %labels
 Name        HUZAR
 Description Learning part of the HUZAR submission
-Authors     Piotr Rafal Gzubicki <pgzubi21@student.aau.dk>, Bartosz Piotr Lachowicz <blacho21@student.aau.dk>, Alvaro Torralba <alto@cs.aau.dk>
+Authors     Piotr Rafal Gzubicki <piotr.gzubicki97@gmail.com>, Bartosz Piotr Lachowicz <jendrekpg@gmail.com>, Alvaro Torralba <alto@cs.aau.dk>
 License     GPL 3
 Tracks      single-core
 SupportsDerivedPredicates                       yes
