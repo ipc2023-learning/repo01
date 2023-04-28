@@ -166,12 +166,13 @@ def main():
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
-    for i in range(2):
+    for i in range(3):
         model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
             # Copy the best model to the DK folder
             save_model(model_path, DK_DIR, model_setting)
+            make_tarfile(DK_DIR, f'dk.{i}')
         else:
             if os.path.exists(TEMP_DIR):
                 shutil.rmtree(TEMP_DIR)
@@ -196,9 +197,11 @@ def main():
                 shutil.rmtree(DK_DIR)
                 # copy TEMP_DIR to DK_DIR
                 shutil.copytree(TEMP_DIR, DK_DIR)
+                # make tarfile
+                make_tarfile(DK_DIR, f'dk.{i}')
 
 
-    make_tarfile(DK_DIR, f'DK.tar.gz')
+
 
 def save_model(source_model, target_dir, model_setting):
 

@@ -199,8 +199,6 @@ def check_model_score_on_problem(path_to_model_dir, domain_path, PROBLEM):
     output = output.decode()
 
     operators = regex_operators.findall(output)
-    print(operators)
-    input("Press Enter to continue...")
 
     result = float(operators[-1])
     return result
@@ -214,10 +212,6 @@ def compare_models(path_to_best, path_to_candidate, domain_path, instances_dir, 
 
         best_operators = check_model_score_on_problem(path_to_best, domain_path, PROBLEM)
         candidate_operators = check_model_score_on_problem(path_to_candidate, domain_path, PROBLEM)
-            
-        print(f"Best operators: {best_operators}")
-        print(f"Candidate operators: {candidate_operators}")
-        input("Press Enter to continue...")
 
         if best_operators < candidate_operators:
             comaprison_results.append(1)
