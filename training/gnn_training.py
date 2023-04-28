@@ -78,7 +78,7 @@ def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_
 
     # return output, output_error
 
-    num_epoch = str(1500)
+    num_epoch = str(1000)
 
     Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting, "--num-epoch", num_epoch], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
 

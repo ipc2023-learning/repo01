@@ -186,7 +186,7 @@ def main():
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
     for i in range(3):
-        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=TIME_LIMITS_SEC['smac-optimizationsmac-optimization'], n_trials=100, n_workers=1, run_id=i)
+        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=TIME_LIMITS_SEC['smac-optimization'], n_trials=100, n_workers=1, run_id=i)
         #model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, instances_manager.get_instance_properties(), walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
