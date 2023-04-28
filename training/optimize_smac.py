@@ -23,7 +23,7 @@ INTERMEDIATE_SMAC_MODELS = 'intermediate-smac-models'
 
 
 class Eval:
-    def __init__(self, ROOT, DATA_DIR, WORKING_DIR, domain_file, instances_dir):
+    def __init__(self, ROOT, DATA_DIR, WORKING_DIR, domain_file, instances_dir, instances_properties):
         self.DATA_DIR = DATA_DIR
         self.MY_DIR = os.path.dirname(os.path.realpath(__file__))
         self.GNN_REPO_DIR = os.path.join(os.path.join(ROOT, "gnn-learning"))
@@ -38,6 +38,7 @@ class Eval:
             shutil.rmtree(self.SMAC_MODELS_DIR)
         os.mkdir(self.SMAC_MODELS_DIR)
         self.instances_dir = instances_dir
+        self.instances_properties = instances_properties
         self.domain_file = domain_file
 
         self.regex_total_time = re.compile(rb"INFO\s+Planner time:\s(.+)s", re.MULTILINE)
@@ -54,7 +55,7 @@ class Eval:
         print(f"Running {instance} with {model_settings} and {target_folder}")
 
         # TODO: setup limits
-        model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}', time_limit=300, memory_limit=4*1024*1024)
+        model_path = run_step_gnn_learning(self.GNN_REPO_DIR, model_settings, f'{self.GNN_DATA_DIR}/{target_folder}', f'{self.GNN_LEARNING_DIR}/{target_folder}', time_limit=600, memory_limit=4*1024*1024)
 
         if model_path is None:
             return 10000000
@@ -70,7 +71,7 @@ class Eval:
 
 
         try:
-            output, error_output = proc.communicate(timeout=300) # Timeout in seconds TODO: set externally
+            output, error_output = proc.communicate(timeout=450) # Timeout in seconds TODO: set externally
             read_output = output.decode()
 
             total_time = self.regex_total_time.search(output)
@@ -132,7 +133,7 @@ def parse_config(config):
 # Note: default configuration should solve at least 50% of the instances. Pick instances
 # with LAMA accordingly. If we run SMAC multiple times, we can use different instances
 # set, as well as changing the default configuration each time.
-def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, walltime_limit, n_trials, n_workers, run_id):
+def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_with_features : dict, instances_properties : dict, walltime_limit, n_trials, n_workers, run_id):
     GNN_LEARNING_DIR = os.path.join(DATA_DIR, 'gnn-learning')
     DATA_DIR = os.path.abspath(DATA_DIR) # Make sure path is absolute so that symlinks work
     working_dir = f'{WORKING_DIR}'+f'-run-{run_id}'
@@ -143,7 +144,7 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     #############################
 
     target_folder = Categorical('target_folder', ['mixed', "runs-lama", "good-operators-unit"], default="good-operators-unit")
-    layers_num = Categorical('layers_num', [2,3], default=3)
+    layers_num = Categorical('layers_num', [2,4,6], default=4)
     hidden_size = Categorical('hidden_size', [4,8,16], default=8)
     conv_type = Categorical('conv_type', ['SAGEConv', 'GATConv'], default='SAGEConv')
     aggr = Categorical('aggr', ['mean', 'max'], default='mean')
@@ -159,7 +160,7 @@ def run_smac(ROOT, DATA_DIR, WORKING_DIR, domain_file, instance_dir, instances_w
     cs.add_hyperparameters(parameters)
     # cs.add_conditions(conditions)
 
-    evaluator = Eval (ROOT, DATA_DIR, working_dir, domain_file, instance_dir)
+    evaluator = Eval (ROOT, DATA_DIR, working_dir, domain_file, instance_dir, instances_properties)
 
 
     print ([ins for ins in instances_with_features])

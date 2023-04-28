@@ -46,7 +46,7 @@ from downward import suites
 TIME_LIMITS_IPC_SINGLE_CORE = {
     'run_experiment' : 10*60, # 10 minutes
     'train-hard-rules' : 60*60, # 1 hour, time per schema, TODO
-    'smac-optimization-hard-rules' : 60*60, # 1 hour
+    'smac-optimization' : 60*60*7, # 1 hour
     'smac-partial-grounding-total' : 60*60, # 1 hour
     'smac-partial-grounding-run' : 120,
 }
@@ -121,10 +121,10 @@ def main():
     RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-unit', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true, cost_type=1)"], ENV, SUITE_GOOD_OPERATORS)
     instances_manager.add_training_data(f'{TRAINING_DIR}/good-operators-unit')
 
-    has_action_cost = len(select_instances_from_runs(f'{TRAINING_DIR}/good-operators-unit', lambda p : p['use_metric'])) > 0
-    if has_action_cost:
-        RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-cost', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_GOOD_OPERATORS)
-        instances_manager.add_training_data(f'{TRAINING_DIR}/good-operators-cost')
+    # has_action_cost = len(select_instances_from_runs(f'{TRAINING_DIR}/good-operators-unit', lambda p : p['use_metric'])) > 0
+    # if has_action_cost:
+    #     RUN.run_good_operators(f'{TRAINING_DIR}/good-operators-cost', REPO_GOOD_OPERATORS, ['--search', "sbd(store_operators_in_optimal_plan=true)"], ENV, SUITE_GOOD_OPERATORS)
+    #     instances_manager.add_training_data(f'{TRAINING_DIR}/good-operators-cost')
 
     TRAINING_INSTANCES = instances_manager.split_training_instances()
 
@@ -186,7 +186,8 @@ def main():
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
     for i in range(3):
-        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=TIME_LIMITS_SEC['smac-partial-grounding-total'], n_trials=100, n_workers=1, run_id=i)
+        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, walltime_limit=TIME_LIMITS_SEC['smac-optimizationsmac-optimization'], n_trials=100, n_workers=1, run_id=i)
+        #model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, instances_manager.get_instance_properties(), walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
             # Copy the best model to the DK folder
