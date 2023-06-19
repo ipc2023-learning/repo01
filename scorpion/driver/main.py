@@ -46,20 +46,41 @@ def main():
         print("Running {} component".format(component))
         # continue
         if component == "translate":
+            args.relaxed_plan = False
+            args.simple_landmarks = False
             (exitcode, continue_execution) = run_components.run_translate(args)
+
+            if continue_execution and args.find_relaxed_plan:
+                run_components.run_search_only_relaxed_plan(args)
+                args.relaxed_plan = True
+
+            if continue_execution and args.find_simple_landmarks:
+                run_components.run_search_only_simple_landmarks(args)
+                args.simple_landmarks = True
+
             if continue_execution and args.transform_task:
                 # print(args)
                 run_components.transform_task(args)
 
         elif component == "search":
-            # parameters for the retry after failing
-            failed_count = -1
+            # We start with -1 cause if we want to have 3 retries and then run on the original plan (4th time)
+            # This causes the loop to correspond to something like DO WHILE in C++, since we
+            # We start with 0 if we only want to have limited number of retries and not fall back to original plan
+            failed_count = 0
  
             (exitcode, continue_execution) = run_components.run_search(args)
 
             # We retry until we succeed or we have tried 3 times
-            while not continue_execution and not failed_count == 3:
+
+            if args.transform_task_options is not None:
+                allowed_retries = int(args.transform_task_options.split(",")[1])
+            else:
+                allowed_retries =-1
+
+            while not continue_execution and not failed_count == allowed_retries:
                 failed_count += 1
+                # Search longer with each retry
+                args.search_time_limit = int(args.search_time_limit) + (failed_count+1) * 60
                 args.transform_task_options += f",failed,{failed_count}"
                 run_components.transform_task(args)  # TODO: add some exit code
                 (exitcode, continue_execution) = run_components.run_search(args)
