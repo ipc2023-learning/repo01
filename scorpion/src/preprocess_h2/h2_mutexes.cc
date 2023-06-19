@@ -177,7 +177,7 @@ bool H2Mutexes::set_unreachable(int var, int val, const vector <Variable *> &var
 
     unreachable[var][val] = true;
     if (variables[var]->is_reachable(val)) {
-        cout << "Unreachable proposition: " << variables[var]->get_fact_name(val) << endl;
+        // cout << "Unreachable proposition: " << variables[var]->get_fact_name(val) << endl;
         variables[var]->set_unreachable(val);
     } else {
         cout << "WARNING: Double setting as unreachable" << endl;

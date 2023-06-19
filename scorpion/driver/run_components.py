@@ -104,9 +104,6 @@ def transform_task(args):
         for i, option in enumerate(options):
             if i % 2 == 0:
                 options[i] = "--" + option
-    
-        # options.append("--sas-file")
-        # options.append(args.sas_file)
 
     print(f"THESE ARE THE OPTIONS: {options}")
 
@@ -117,10 +114,14 @@ def transform_task(args):
             stdin=args.sas_file,
             time_limit=time_limit,
             memory_limit=memory_limit)
+        return (0, True)
+
     except subprocess.CalledProcessError as err:
+        print(f"THIS IS THE ERROR: {err.returncode}")
         if err.returncode != -signal.SIGXCPU:
             returncodes.print_stderr(
                 f"Task transformation returned exit status {err.returncode}")
+        return (err.returncode, False)
 
 
 def run_search(args):
@@ -130,12 +131,13 @@ def run_search(args):
     memory_limit = limits.get_memory_limit(
         args.search_memory_limit, args.overall_memory_limit)
     executable = get_executable(args.build, REL_SEARCH_PATH)
-
+    print(f"THIS IS THE TIME LIMIT: {time_limit}")
     plan_manager = PlanManager(
         args.plan_file,
         portfolio_bound=args.portfolio_bound,
         single_plan=args.portfolio_single_plan)
     plan_manager.delete_existing_plans()
+
 
     if args.portfolio:
         assert not args.search_options
@@ -166,6 +168,61 @@ def run_search(args):
             return (err.returncode, False)
         else:
             return (0, True)
+        
+
+def run_search_only_relaxed_plan(args):
+    logging.info("Running search for only relaxed plan (%s)." % args.build)
+
+    search_options = [
+        '--search', 'astar(ff(print_and_exit=true))', '--internal-plan-file', 'sas_plan'
+    ]
+    executable = get_executable(args.build, REL_SEARCH_PATH)
+
+    try:
+        call.check_call(
+            "search",
+            [executable] + search_options,
+            stdin=args.search_input
+            )
+    except subprocess.CalledProcessError as err:
+        # TODO: if we ever add support for SEARCH_PLAN_FOUND_AND_* directly
+        # in the planner, this assertion no longer holds. Furthermore, we
+        # would need to return (err.returncode, True) if the returncode is
+        # in [0..10].
+        # Negative exit codes are allowed for passing out signals.
+        assert err.returncode >= 10 or err.returncode < 0, "got returncode < 10: {}".format(err.returncode)
+        return (err.returncode, False)
+    else:
+        return (0, True)
+    
+
+def run_search_only_simple_landmarks(args):
+    logging.info("Running search for only simple landmarks (%s)." % args.build)
+
+    search_options = [
+    '--search', 'eager_greedy([lmcount(lm_zg(print_and_exit=true,use_orders=false))])',  '--internal-plan-file', 'sas_plan'
+    ]
+    executable = get_executable(args.build, REL_SEARCH_PATH)
+
+    try:
+        call.check_call(
+            "search",
+            [executable] + search_options,
+            stdin=args.search_input
+            )
+    except subprocess.CalledProcessError as err:
+        # TODO: if we ever add support for SEARCH_PLAN_FOUND_AND_* directly
+        # in the planner, this assertion no longer holds. Furthermore, we
+        # would need to return (err.returncode, True) if the returncode is
+        # in [0..10].
+        # Negative exit codes are allowed for passing out signals.
+        assert err.returncode >= 10 or err.returncode < 0, "got returncode < 10: {}".format(err.returncode)
+        return (err.returncode, False)
+    else:
+        return (0, True)
+    
+
+
 
 
 def run_validate(args):
