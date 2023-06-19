@@ -52,8 +52,8 @@ class Eval:
     def target_function(self, config: Configuration, instance: str, seed: int) -> float:
         model_settings, target_folder = parse_config(config)
 
-        DOMAIN = f'{self.instances_dir}/{instance}/domain.pddl'
-        PROBLEM = f'{self.instances_dir}/{instance}/problem.pddl'
+        DOMAIN = f'{self.instances_dir}/{self.domain_file}'
+        PROBLEM = f'{self.instances_dir}/{instance}.pddl'
 
         print(f"Domain: {DOMAIN}")
         print(f"Problem: {PROBLEM}")
@@ -215,7 +215,7 @@ def check_model_score_on_problem(path_to_model_dir, domain_path, PROBLEM, extra_
     with open(preprocessr_settings_file, 'r') as f:
         preprocess_settings = f.read()
 
-    command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py', extra_flags, '--alias', 'lama-first', '--transform-task-options', preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
+    command = [sys.executable, f'{SCORPION_DIR}/fast-downward.py'] +  extra_flags + ['--alias', 'lama-first', '--transform-task-options', preprocess_settings, '--transform-task', f'{GNN_REPO_DIR}/src/preprocessor.command', domain_path, PROBLEM]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error_output = proc.communicate()
 
