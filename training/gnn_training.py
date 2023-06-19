@@ -28,7 +28,7 @@ OPTIMIZER_CLASSES = {
     "Adagrad"
 }
 
-def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_dir, output_dir, time_limit=300, memory_limit = 4*1024*1024):
+def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_dir, output_dir, time_limit=1200, memory_limit = 4*1024*1024):
     train_dir = os.path.join(problems_dir, "train")
     test_dir = os.path.join(problems_dir, "test")
 
@@ -80,7 +80,8 @@ def run_step_gnn_learning(REPO_LEARNING, model_setting:"ModelSetting", problems_
 
     num_epoch = str(1000)
 
-    Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, test_dir, output_dir, "--model-settings", setting, "--num-epoch", num_epoch], "train-gnn" ,time_limit=time_limit, memory_limit=memory_limit).wait()
+
+    Call([sys.executable, f'{REPO_LEARNING}/src/train.py', train_dir, output_dir, "--model-settings", setting, "--num-epoch", num_epoch], "train-gnn", time_limit=time_limit, memory_limit=memory_limit).wait()
 
     # TODO: We currently have only one model, but in future we will have multiple models
     # latest_model = None if len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) == 0 else len(os.listdir(f'{output_dir}/models/{model_settings.dir_name}')) - 1
