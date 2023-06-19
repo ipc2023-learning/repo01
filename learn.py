@@ -14,6 +14,9 @@ from lab.environments import  LocalEnvironment
 
 debug=False
 
+NONE_FLAG = []
+extra_flags = NONE_FLAG
+
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
 if debug:
@@ -160,8 +163,7 @@ def main():
     data_folders.append((mixed_operators_data, gnn_data_mixed))
 
 
-    NONE_FLAG = []
-    extra_flags = NONE_FLAG
+
 
     for problems_dir, output_dir in data_folders:
         run_step_generate_gnn_data(
