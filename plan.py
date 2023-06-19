@@ -54,11 +54,9 @@ def main():
     # shutil.unpack_archive(DK_DIR_FILE, DK_DIR ,'zip')
     
     model_path = os.path.join(dk_folder, "model.pt")
-    preprocessor_settings = os.path.join(dk_folder, "DK", "preprocessor_settings.txt")
+    # preprocessor_settings = os.path.join(dk_folder, "DK", "preprocessor_settings.txt")
+    preprocessor_settings = "gnn-retries,2,gnn-threshold,0.5,model-path,extracted/DK/model.pt"
 
-    # Read preprocessor settings as string
-    with open(preprocessor_settings, "r") as f:
-        preprocessor_settings = f.read()
 
     subprocess.check_call(
         [f'{SCORPION_PATH}/fast-downward.py']
