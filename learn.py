@@ -61,6 +61,7 @@ MEMORY_LIMITS_MB = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dk", help="domain knowledge file we are not using")
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
     parser.add_argument("--path", default='data', help="path to store results")
@@ -170,7 +171,7 @@ def main():
             REPO_GNN_LEARNING=REPO_GNN_LEARNING,
             PROBLEMS_DIR=problems_dir,
             OUTPUT_DIR=output_dir,
-            extra_flags=extra_flags  # NONE FLAG IS SET
+            extra_flags=extra_flags,  # NONE FLAG IS SET
             time_limit=600, # TODO: what should it be 
             memory_limit=4*1024*1024 # TODO: what should it be
         )
@@ -189,7 +190,7 @@ def main():
         model_path, model_setting = run_smac(
             ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES,
             instances_manager.get_instance_properties(), walltime_limit=TIME_LIMITS_SEC['smac-optimization'],
-            n_trials=500, n_workers=1, run_id=i)
+            n_trials=300, n_workers=1, run_id=i, extra_flags=extra_flags)
         #model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, instances_manager.get_instance_properties(), walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
