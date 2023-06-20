@@ -12,15 +12,16 @@ from preprocessor.preprocess_GNN import run_gnn_preprocessor
 # logger with info display level
 logger = logging.getLogger(__name__)
 # set info to be visible
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
-H2_PATH = "workspace/h2.sas"
-H2_GNN_PATH = "workspace/h2_gnn.sas"
-H2_GNN_H2_PATH = "workspace/h2_gnn_h2.sas"
+# H2_PATH = "workspace/h2.sas"
+GNN_PATH = "workspace/gnn.sas"
+GNN_H2_PATH = "workspace/gnn_h2.sas"
 WORKSPACE_SAS = "workspace/output.sas"
+ORIGINAL_SAS = "workspace/original.sas"
 # import dupa
 
-def default_gnn_preprocessor(threshold, retries, model_path):
+def default_gnn_preprocessor(threshold, retries, model_path, use_relaxed_plan, use_simple_landmarks):
     # Original step
     input = sys.stdin
     save_to_workspace(input, "original.sas")
@@ -28,68 +29,71 @@ def default_gnn_preprocessor(threshold, retries, model_path):
         workspace_original_sas = f.read()
 
     # H2 step
-    run_h2_preprocessor_on_file(WORKSPACE_SAS)
-    copy_file(WORKSPACE_SAS, H2_PATH)
+    # run_h2_preprocessor_on_file(WORKSPACE_SAS, time_limit=5*60)
+    # copy_file(WORKSPACE_SAS, H2_PATH)
     # Check 
-    with open(WORKSPACE_SAS, "r") as f:
-        h2_sas = f.read()
-    if workspace_original_sas == h2_sas:
-        logger.info("ORG -> H2 preprocessor did not change the sas file")
+    # with open(WORKSPACE_SAS, "r") as f:
+    #     h2_sas = f.read()
+    # if workspace_original_sas == h2_sas:
+    #     logger.info("ORG -> H2 preprocessor did not change the sas file")
 
     # GNN STEP
     run_gnn_preprocessor(sas_path=WORKSPACE_SAS,
                          output_dir="workspace",
                          model_path=model_path,
                          threshold=threshold,
-                         retries=retries)
-    copy_file(WORKSPACE_SAS, H2_GNN_PATH)
+                         retries=retries,
+                         relaxed_plan=use_relaxed_plan,
+                         simple_landmarks=use_simple_landmarks,
+    )
+    # copy_file(WORKSPACE_SAS, GNN_PATH)
     # Check
-    with open(WORKSPACE_SAS, "r") as f:
-        h2_gnn_sas = f.read()
-    if h2_sas == h2_gnn_sas:
-        logger.info("H2 -> GNN preprocessor did not change the sas file")
+    # with open(WORKSPACE_SAS, "r") as f:
+    #     gnn_sas = f.read()
+    # if workspace_original_sas == gnn_sas:
+    #     logger.info("ORIGINAL -> GNN preprocessor did not change the sas file")
 
     # Second H2 STEP
-    run_h2_preprocessor_on_file(WORKSPACE_SAS)
-    copy_file(WORKSPACE_SAS, H2_GNN_H2_PATH)
+    run_h2_preprocessor_on_file(WORKSPACE_SAS, 5*60)
+    # copy_file(WORKSPACE_SAS, GNN_H2_PATH)
     # Check
-    with open(WORKSPACE_SAS, "r") as f:
-        h2_gnn_h2_sas = f.read()
-    if h2_gnn_sas == h2_gnn_h2_sas:
-        logger.info("GNN -> H2 preprocessor did not change the sas file")
+    # with open(WORKSPACE_SAS, "r") as f:
+    #     gnn_h2_sas = f.read()
+    # if gnn_sas == gnn_h2_sas:
+    #     logger.info("GNN -> H2 preprocessor did not change the sas file")
 
 
 def failed_gnn_preprocessor(failed_count, retries):
     if failed_count == retries or not os.path.exists("workspace/retries"):
         if failed_count == retries:
-            print("Retries exceeded, using original sas file after h2 preprocessor")
+            print("Retries exceeded, using original sas file")
 
         else:
             print("No retries available")
 
-        copy_file(H2_PATH, WORKSPACE_SAS)
-        raise Exception(
-            "Retries exceeded or no retries available, using original sas file after h2 preprocessor,\
-                this exception was called to indiciate that to the driver"
-            )
+        copy_file(ORIGINAL_SAS, WORKSPACE_SAS)
+        logger.warning("Retries exceeded or no retries available, using original sas file,\
+                       this exception was called to indiciate that to the driver")
+        return
 
 
     # We have that one
-    h2_gnn_path = os.path.join("workspace", "retries", f"h2_gnn{failed_count}.sas")
+    gnn_path = os.path.join("workspace", "retries", f"gnn{failed_count}.sas")
     # We will create this one
-    h2_gnn_h2_path = os.path.join("workspace", "retries", f"h2_gnn{failed_count}_h2.sas")
+    # gnn_h2_path = os.path.join("workspace", "retries", f"gnn{failed_count}_h2.sas")
 
+    copy_file(gnn_path, WORKSPACE_SAS)
     # H2 Step
-    run_h2_preprocessor_on_file(h2_gnn_path)
-    copy_file(WORKSPACE_SAS, h2_gnn_h2_path)
+    run_h2_preprocessor_on_file(gnn_path, 10*60)
+    # copy_file(WORKSPACE_SAS, gnn_h2_path) 
 
-    with open(h2_gnn_path, "r") as h2_gnn_f:
-        h2_gnn_sas = h2_gnn_f.read()
-    with open(h2_gnn_h2_path, "r") as h2_gnn_h2_f:
-        h2_gnn_h2_sas = h2_gnn_h2_f.read()
+    # with open(gnn_path, "r") as gnn_f:
+    #     gnn_sas = gnn_f.read()
+    # with open(gnn_h2_path, "r") as gnn_h2_f:
+    #     gnn_h2_sas = gnn_h2_f.read()
 
-    if h2_gnn_sas == h2_gnn_h2_sas:
-        logger.info("GNN -> H2 preprocessor did not change the sas file")
+    # if gnn_sas == gnn_h2_sas:
+    #     logger.info("GNN -> H2 preprocessor did not change the sas file")
     
 
 
@@ -105,6 +109,14 @@ threshold = args.gnn_threshold
 retries = args.gnn_retries
 model_path = args.model_path
 
+use_relaxed_plan = False
+if os.path.exists("workspace/relaxed_plan") or os.path.exists("relaxed_plan"):
+    use_relaxed_plan = True
+
+use_simple_landmarks = False
+if os.path.exists("workspace/simple_landmarks") or os.path.exists("simple_landmarks"):
+    use_simple_landmarks = True
+
 
 print("##"*100)
 if args.failed >= 0:
@@ -115,7 +127,9 @@ else:
     default_gnn_preprocessor(
         threshold=threshold,
         retries=retries,
-        model_path=model_path
+        model_path=model_path,
+        use_relaxed_plan=use_relaxed_plan,
+        use_simple_landmarks=use_simple_landmarks
     )
 
 print("##"*100)

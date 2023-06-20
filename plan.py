@@ -9,6 +9,7 @@ import sys
 import shutil
 import tarfile
 
+from learn import extra_flags
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,15 +54,21 @@ def main():
     # shutil.unpack_archive(DK_DIR_FILE, DK_DIR ,'zip')
     
     model_path = os.path.join(dk_folder, "model.pt")
-    preprocessor_settings = os.path.join(dk_folder, "DK", "preprocessor_settings.txt")
-
-    # Read preprocessor settings as string
-    with open(preprocessor_settings, "r") as f:
-        preprocessor_settings = f.read()
-
-    subprocess.check_call([f'{SCORPION_PATH}/fast-downward.py', '--alias', 'lama', '--transform-task-options', preprocessor_settings, '--transform-task', f'{REPO_GNN_LEARNING}/src/preprocessor.command', DOMAIN, PROBLEM])
+    # preprocessor_settings = os.path.join(dk_folder, "DK", "preprocessor_settings.txt")
+    preprocessor_settings = "gnn-retries,2,gnn-threshold,0.5,model-path,extracted/DK/model.pt"
 
 
+    subprocess.check_call(
+        [f'{SCORPION_PATH}/fast-downward.py']
+        + extra_flags + [
+            '--alias', 'lama-first',
+            '--keep-sas-file',
+            '--transform-task-options', preprocessor_settings,
+            '--transform-task', f'{REPO_GNN_LEARNING}/src/preprocessor.command',
+            '--overall-time-limit', '2400',
+            '--search-time-limit', '500',
+            DOMAIN,
+            PROBLEM])
 
 if __name__ == "__main__":
     main()

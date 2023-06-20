@@ -14,6 +14,9 @@ from lab.environments import  LocalEnvironment
 
 debug=False
 
+NONE_FLAG = []
+extra_flags = NONE_FLAG
+
 sys.path.append(f'{os.path.dirname(__file__)}/training')
 import training
 if debug:
@@ -44,24 +47,21 @@ from downward import suites
 
 # All time limits are in seconds
 TIME_LIMITS_IPC_SINGLE_CORE = {
-    'run_experiment' : 10*60, # 10 minutes
-    'train-hard-rules' : 60*60, # 1 hour, time per schema, TODO
+    'run_experiment' : 15*60, # 10 minutes
     'smac-optimization' : 60*60*7, # 1 hour
-    'smac-partial-grounding-total' : 60*60, # 1 hour
-    'smac-partial-grounding-run' : 120,
 }
 
 TIME_LIMITS_SEC = TIME_LIMITS_IPC_SINGLE_CORE
 
 # Memory limits are in MB
 MEMORY_LIMITS_MB = {
-    'run_experiment' : 1024*4,
-    'train-hard-rules' : 1024*4
+    'run_experiment' : 1024*16,
 }
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("dk", help="domain knowledge file we are not using")
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
     parser.add_argument("--path", default='data', help="path to store results")
@@ -164,14 +164,15 @@ def main():
     data_folders.append((mixed_operators_data, gnn_data_mixed))
 
 
-    # data_folders.append((x2, y2))
+
 
     for problems_dir, output_dir in data_folders:
         run_step_generate_gnn_data(
             REPO_GNN_LEARNING=REPO_GNN_LEARNING,
             PROBLEMS_DIR=problems_dir,
             OUTPUT_DIR=output_dir,
-            time_limit=300, # TODO: what should it be 
+            extra_flags=extra_flags,  # NONE FLAG IS SET
+            time_limit=600, # TODO: what should it be 
             memory_limit=4*1024*1024 # TODO: what should it be
         )
 
@@ -186,21 +187,24 @@ def main():
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
     for i in range(3):
-        model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, instances_manager.get_instance_properties(), walltime_limit=TIME_LIMITS_SEC['smac-optimization'], n_trials=100, n_workers=1, run_id=i)
+        model_path, model_setting = run_smac(
+            ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES,
+            instances_manager.get_instance_properties(), walltime_limit=TIME_LIMITS_SEC['smac-optimization'],
+            n_trials=300, n_workers=1, run_id=i, extra_flags=extra_flags)
         #model_path, model_setting = run_smac( ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, instances_manager.get_instance_properties(), walltime_limit=100, n_trials=100, n_workers=1, run_id=i)
 
         if i == 0:
             # Copy the best model to the DK folder
-            save_model(model_path, DK_DIR, model_setting)
+            save_model(model_path, DK_DIR, model_setting, extra_flags)
             make_tarfile(DK_DIR, f'dk.{i}')
         else:
             if os.path.exists(TEMP_DIR):
                 shutil.rmtree(TEMP_DIR)
             os.mkdir(TEMP_DIR)
 
-            save_model(model_path, TEMP_DIR, model_setting)
+            save_model(model_path, TEMP_DIR, model_setting, extra_flags)
 
-            is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, BENCHMARKS_DIR, SMAC_INSTANCES)
+            is_candidate_better = compare_models(DK_DIR, TEMP_DIR, args.domain, BENCHMARKS_DIR, SMAC_INSTANCES, extra_flags=extra_flags)
             print(f"Is candidate better: {is_candidate_better}")
             # input("Press Enter to continue...")
 
@@ -223,9 +227,13 @@ def main():
 
 
 
-def save_model(source_model, target_dir, model_setting):
+def save_model(source_model, target_dir, model_setting, extra_flags):
 
     shutil.copy(source_model, f'{target_dir}/model.pt')
+
+    # save extra flags
+    with open(os.path.join(target_dir, "extra_flags.txt"), "w") as f:
+        f.write(str(extra_flags))
 
     with open(os.path.join(target_dir, "model_settings.txt"), "w") as f:
         f.write(model_setting.to_parameter_string_comma())
