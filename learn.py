@@ -61,9 +61,9 @@ MEMORY_LIMITS_MB = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("dk", help="domain knowledge file we are not using")
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
+    parser.add_argument("--domain_knowledge_file", help="path to store knowledge file.")
     parser.add_argument("--path", default='data', help="path to store results")
     parser.add_argument("--cpus", type=int, default=1, help="number of cpus available")
     parser.add_argument("--total_time_limit", default=30, type=int, help="time limit")
@@ -88,6 +88,7 @@ def main():
     GNN_DATA_DIR = f"{TRAINING_DIR}/gnn-data"
     GNN_LEARNING_DIR = f"{TRAINING_DIR}/gnn-learning"
 
+    DK_OUTPUT=args.domain_knowledge_file
 
     if os.path.exists(TRAINING_DIR):
         shutil.rmtree(TRAINING_DIR)
@@ -196,7 +197,7 @@ def main():
         if i == 0:
             # Copy the best model to the DK folder
             save_model(model_path, DK_DIR, model_setting, extra_flags)
-            make_tarfile(DK_DIR, f'dk.{i}')
+            make_tarfile(DK_DIR, f'{DK_OUTPUT}.{i}')
         else:
             if os.path.exists(TEMP_DIR):
                 shutil.rmtree(TEMP_DIR)
@@ -222,7 +223,7 @@ def main():
                 # copy TEMP_DIR to DK_DIR
                 shutil.copytree(TEMP_DIR, DK_DIR)
                 # make tarfile
-                make_tarfile(DK_DIR, f'dk.{i}')
+                make_tarfile(DK_DIR, f'{DK_OUTPUT}.{i}')
 
 
 
