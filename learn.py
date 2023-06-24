@@ -61,9 +61,9 @@ MEMORY_LIMITS_MB = {
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("dk", help="domain knowledge file we are not using")
     parser.add_argument("domain", help="path to domain file")
     parser.add_argument("problem", nargs="+", help="path to problem file")
+    parser.add_argument("--domain_knowledge_file", help="path to store knowledge file.")
     parser.add_argument("--path", default='data', help="path to store results")
     parser.add_argument("--cpus", type=int, default=1, help="number of cpus available")
     parser.add_argument("--total_time_limit", default=30, type=int, help="time limit")
