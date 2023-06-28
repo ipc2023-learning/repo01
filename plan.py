@@ -9,7 +9,8 @@ import sys
 import shutil
 import tarfile
 
-from learn import extra_flags
+NONE_FLAG = []
+extra_flags = NONE_FLAG
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
