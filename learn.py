@@ -48,7 +48,7 @@ from downward import suites
 # All time limits are in seconds
 TIME_LIMITS_IPC_SINGLE_CORE = {
     'run_experiment' : 15*60, # 10 minutes
-    'smac-optimization' : 60*60*7, # 1 hour
+    'smac-optimization' : 60*60*15, # 15 hours
 }
 
 TIME_LIMITS_SEC = TIME_LIMITS_IPC_SINGLE_CORE
@@ -187,7 +187,7 @@ def main():
 
     SMAC_INSTANCES = instances_manager.get_smac_instances(['translator_operators', 'translator_facts', 'translator_variables'])
 
-    for i in range(3):
+    for i in range(1):
         model_path, model_setting = run_smac(
             ROOT, f'{TRAINING_DIR}', f'{TRAINING_DIR}/smac', args.domain, BENCHMARKS_DIR, SMAC_INSTANCES,
             instances_manager.get_instance_properties(), walltime_limit=TIME_LIMITS_SEC['smac-optimization'],

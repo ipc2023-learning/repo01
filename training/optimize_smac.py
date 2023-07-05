@@ -52,7 +52,7 @@ class Eval:
     def target_function(self, config: Configuration, instance: str, seed: int) -> float:
         model_settings, target_folder = parse_config(config)
 
-        DOMAIN = f'{self.instances_dir}/{self.domain_file}'
+        DOMAIN = f'{self.instances_dir}/domain.pddl'
         PROBLEM = f'{self.instances_dir}/{instance}.pddl'
 
         print(f"Domain: {DOMAIN}")
